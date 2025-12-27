@@ -1,0 +1,546 @@
+/* Features Section Base Styles */
+.features-section {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  overflow: visible;
+  padding: 4rem 2rem;
+}
+
+.features-section > div {
+  overflow: visible;
+}
+
+/* Base Card Styles */
+.features-card {
+  overflow: visible;
+  position: relative;
+  cursor: pointer;
+  isolation: isolate;
+  border-radius: 0.5rem;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform, box-shadow;
+}
+
+.features-card:not(.features-card-custom) {
+  background: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.features-card:not(.features-card-custom):hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  transform: translateY(-8px);
+}
+
+/* ============================================
+   CUSTOM STYLE - When user has applied custom CSS
+   This class has minimal styling so inline styles work
+   ============================================ */
+.features-card-custom {
+  /* Allow all inline styles to take precedence */
+  /* Only set defaults that won't interfere */
+  border: 1px solid #e5e7eb;
+  background: white;
+}
+
+.features-card-custom h3,
+.features-card-custom p {
+  /* Inherit color from parent card which has inline style */
+  color: inherit !important;
+}
+
+.features-card-custom:hover {
+  /* Reset hover styles so inline styles work */
+  cursor: pointer;
+}
+
+/* ============================================
+   VARIANT 1: MINIMAL STYLE
+   ============================================ */
+.features-card-minimal:not(.features-card-custom) {
+  background: white;
+  border-bottom: 4px solid transparent;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 0.5rem;
+}
+
+.features-card-minimal:not(.features-card-custom):hover {
+  border-bottom-color: #3b82f6;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  box-shadow: 0 20px 50px rgba(59, 130, 246, 0.25);
+  transform: translateY(-12px);
+}
+
+.features-card-minimal:not(.features-card-custom) h3 {
+  transition: all 0.3s ease;
+}
+
+.features-card-minimal:not(.features-card-custom):hover h3 {
+  color: #3b82f6;
+  transform: translateX(8px);
+}
+
+/* ============================================
+   VARIANT 2: SHADOW STYLE (Default)
+   ============================================ */
+.features-card-shadow:not(.features-card-custom) {
+  background: white;
+  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.15),
+    0 4px 8px -2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 1;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: visible;
+  will-change: transform, box-shadow;
+  border-radius: 0.5rem;
+}
+
+.features-card-shadow:not(.features-card-custom):hover {
+  box-shadow: 0 35px 70px rgba(59, 130, 246, 0.4),
+    0 20px 40px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(59, 130, 246, 0.1);
+  transform: translateY(-16px) scale(1.03);
+  z-index: 10;
+}
+
+/* ============================================
+   VARIANT 3: GRADIENT BORDER STYLE
+   ============================================ */
+.features-card-gradient:not(.features-card-custom) {
+  background: white;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+  z-index: 1;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: visible;
+  box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.1);
+  will-change: transform, box-shadow;
+  border-radius: 0.5rem;
+}
+
+.features-card-gradient:not(.features-card-custom)::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+  border-radius: 0.5rem;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.features-card-gradient:not(.features-card-custom):hover::before {
+  opacity: 1;
+}
+
+.features-card-gradient:not(.features-card-custom):hover {
+  transform: translateY(-14px) scale(1.02);
+  box-shadow: 0 30px 60px rgba(139, 92, 246, 0.4),
+    0 15px 30px rgba(59, 130, 246, 0.3);
+  z-index: 10;
+}
+
+/* ============================================
+   VARIANT 4: MODERN STYLE (Elevated)
+   ============================================ */
+.features-card-modern:not(.features-card-custom) {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: visible;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 1;
+  will-change: transform, box-shadow;
+  border-radius: 0.5rem;
+}
+
+.features-card-modern:not(.features-card-custom)::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(59, 130, 246, 0.15),
+    transparent
+  );
+  transition: left 0.6s ease;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.features-card-modern:not(.features-card-custom):hover::after {
+  left: 100%;
+}
+
+.features-card-modern:not(.features-card-custom):hover {
+  border-color: #3b82f6;
+  box-shadow: 0 40px 80px rgba(59, 130, 246, 0.35),
+    0 20px 40px rgba(0, 0, 0, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+  transform: translateY(-18px) scale(1.04);
+  z-index: 10;
+}
+
+/* ============================================
+   ICON ANIMATIONS
+   ============================================ */
+.features-card[data-variant="2"] img,
+.features-card[data-variant="3"] img {
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.features-card:hover img {
+  transform: scale(1.08);
+  filter: brightness(1.1);
+}
+
+/* Emoji/Icon rotation on hover - with more prominent effect */
+.features-card[data-variant="2"] > div > div:first-child,
+.features-card[data-variant="3"] > div > div:nth-child(2) {
+  display: inline-block;
+  transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  transform-origin: center;
+}
+
+.features-card[data-variant="2"]:hover > div > div:first-child,
+.features-card[data-variant="3"]:hover > div > div:nth-child(2) {
+  transform: rotateY(360deg) scale(1.15);
+}
+
+/* ============================================
+   TEXT ANIMATIONS
+   ============================================ */
+.features-card:not(.features-card-custom) h3 {
+  transition: all 0.3s ease;
+}
+
+.features-card:not(.features-card-custom):hover h3 {
+  color: #3b82f6;
+}
+
+.features-card:not(.features-card-custom) p {
+  transition: color 0.3s ease;
+}
+
+.features-card:not(.features-card-custom):hover p {
+  color: #374151;
+}
+
+/* ============================================
+   BADGE STYLES & ANIMATIONS
+   ============================================ */
+.features-card:not(.features-card-custom)[data-variant="2"] .inline-block,
+.features-card:not(.features-card-custom)[data-variant="3"] .inline-block {
+  transition: all 0.3s ease;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  display: inline-block;
+  width: fit-content;
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.features-card:not(.features-card-custom)[data-variant="2"]:hover .inline-block,
+.features-card:not(.features-card-custom)[data-variant="3"]:hover
+  .inline-block {
+  transform: scale(1.1);
+  animation: pulse 0.6s ease-in-out;
+}
+
+/* ============================================
+   IMAGE ANIMATIONS (Variant 3)
+   ============================================ */
+/* Remove padding from variant 3 cards since they have internal padding */
+.features-card[data-variant="3"] {
+  padding: 0 !important;
+}
+
+.features-card[data-variant="3"] > div > div:first-child {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem 0.5rem 0 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.features-card[data-variant="3"] > div > div:first-child img {
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    filter 0.4s ease;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.features-card[data-variant="3"]:hover > div > div:first-child img {
+  transform: scale(1.15) rotate(2deg);
+  filter: brightness(1.15) saturate(1.1);
+}
+
+/* ============================================
+   BORDER ANIMATIONS
+   ============================================ */
+.features-card-shadow:not(.features-card-custom)::before,
+.features-card-modern:not(.features-card-custom)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+  z-index: 10;
+}
+
+.features-card-shadow:not(.features-card-custom):hover::before,
+.features-card-modern:not(.features-card-custom):hover::before {
+  transform: scaleX(1);
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+@media (max-width: 768px) {
+  .features-section {
+    padding: 3rem 1rem;
+  }
+
+  .features-card {
+    padding: 1.5rem;
+  }
+
+  .features-card:not(.features-card-custom):hover {
+    transform: translateY(-4px);
+  }
+
+  .features-card-modern:not(.features-card-custom):hover {
+    transform: translateY(-4px) scale(1.01);
+  }
+
+  /* Reduce icon rotation on mobile for better performance */
+  .features-card[data-variant="2"] > div > div:first-child,
+  .features-card[data-variant="3"] > div > div:nth-child(2) {
+    transition: transform 0.3s ease;
+  }
+
+  .features-card[data-variant="2"]:hover > div > div:first-child,
+  .features-card[data-variant="3"]:hover > div > div:nth-child(2) {
+    transform: rotate(10deg) scale(1.05);
+  }
+}
+
+/* ============================================
+   FOCUS STATES (Accessibility)
+   ============================================ */
+.features-card:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ============================================
+   VARIANT-SPECIFIC TRANSITIONS
+   ============================================ */
+
+/* Minimal variant - underline animation */
+.features-card-minimal:not(.features-card-custom)::before {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.features-card-minimal:not(.features-card-custom):hover::before {
+  width: 100%;
+}
+
+/* ============================================
+   STAGGER EFFECT FOR INITIAL LOAD
+   ============================================ */
+.features-card {
+  animation: fadeInUp 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.features-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.features-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.features-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.features-card:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.features-card:nth-child(5) {
+  animation-delay: 0.5s;
+}
+
+.features-card:nth-child(6) {
+  animation-delay: 0.6s;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   GRADIENT TEXT EFFECT
+   ============================================ */
+.features-card-modern:not(.features-card-custom):hover h3 {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   PULSE EFFECT FOR BADGES
+   ============================================ */
+.features-card:not(.features-card-custom)[data-variant="2"] .inline-block {
+  position: relative;
+}
+
+.features-card:not(.features-card-custom)[data-variant="2"]:hover
+  .inline-block {
+  animation: pulse 0.6s ease-in-out;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+}
+
+/* ============================================
+   VARIANT 3 IMAGE CARD SPECIFIC STYLES
+   ============================================ */
+
+.features-image-container {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.features-image-img {
+  display: block;
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    filter 0.5s ease, brightness 0.5s ease;
+  will-change: transform;
+}
+
+.features-card[data-variant="3"]:hover .features-image-container {
+  box-shadow: 0 12px 28px rgba(59, 130, 246, 0.2);
+  transform: translateY(-4px);
+}
+
+.features-card[data-variant="3"]:hover .features-image-img {
+  transform: scale(1.12) rotate(2deg);
+  filter: brightness(1.15) saturate(1.1);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* Icon animation for variant 3 */
+.features-variant3-icon {
+  display: inline-block;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
+}
+
+.features-card[data-variant="3"]:hover .features-variant3-icon {
+  transform: scale(1.2) rotateZ(15deg);
+  animation: bounce-3d 0.6s ease-in-out;
+}
+
+@keyframes bounce-3d {
+  0% {
+    transform: scale(1.2) rotateZ(15deg) rotateX(0deg);
+  }
+  50% {
+    transform: scale(1.25) rotateZ(15deg) rotateX(180deg);
+  }
+  100% {
+    transform: scale(1.2) rotateZ(15deg) rotateX(360deg);
+  }
+}
+
+/* Enhanced card shadow for variant 3 */
+.features-card[data-variant="3"].features-card-shadow:hover {
+  box-shadow: 0 25px 50px -5px rgba(59, 130, 246, 0.2),
+    0 12px 24px -2px rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.features-card[data-variant="3"].features-card-modern:hover {
+  box-shadow: 0 28px 60px rgba(59, 130, 246, 0.25),
+    0 15px 30px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.features-card[data-variant="3"].features-card-gradient:hover {
+  box-shadow: 0 20px 50px rgba(59, 130, 246, 0.3);
+}
+
+/* ============================================
+   DARK MODE SUPPORT
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  .features-section {
+    background: linear-gradient(135deg, #0f172a 0%, #1a1f35 100%);
+  }
+
+  .features-card-shadow:not(.features-card-custom),
+  .features-card-modern:not(.features-card-custom) {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .features-card-minimal:not(.features-card-custom) {
+    background: transparent;
+  }
+
+  .features-card:not(.features-card-custom) h3 {
+    color: #f1f5f9;
+  }
+
+  .features-card:not(.features-card-custom) p {
+    color: #cbd5e1;
+  }
+
+  .features-card-shadow:not(.features-card-custom):hover,
+  .features-card-modern:not(.features-card-custom):hover {
+    background: #334155;
+    box-shadow: 0 20px 40px rgba(59, 130, 246, 0.25);
+  }
+}
