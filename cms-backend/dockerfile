@@ -1,19 +1,85 @@
-# Stage 1: build
+# ==============================================================================
+# CMS Backend Dockerfile
+# ==============================================================================
+# Multi-stage build for optimized production image
+#
+# Stage 1 (builder): Compile TypeScript to JavaScript
+# Stage 2 (runner): Run the compiled application
+#
+# Build: docker build -t cms-backend .
+# Run: docker run -p 4000:4000 --env-file .env cms-backend
+#
+# Environment Variables Required:
+# - MONGODB_URI: MongoDB connection string
+# - JWT_SECRET: Secret key for JWT signing
+# - FRONTEND_URL: Frontend URL for CORS
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1: Build Stage
+# Compiles TypeScript code to JavaScript
+# -----------------------------------------------------------------------------
 FROM node:20-alpine AS builder
+
+# Set working directory
 WORKDIR /app
+
+# Copy package files first for better layer caching
 COPY package*.json ./
 COPY tsconfig.json ./
+
+# Install all dependencies including devDependencies (needed for TypeScript)
 RUN npm ci --production=false
+
+# Copy source code
 COPY . .
+
+# Compile TypeScript to JavaScript
+# Output goes to dist/ directory
 RUN npm run build
 
-# Stage 2: production image
+# -----------------------------------------------------------------------------
+# Stage 2: Production Stage
+# Runs the compiled JavaScript application
+# -----------------------------------------------------------------------------
 FROM node:20-alpine AS runner
+
+# Set working directory
 WORKDIR /app
+
+# Set Node environment to production
+# This optimizes Express and other libraries for production
 ENV NODE_ENV=production
+
+# Copy package files
 COPY --from=builder /app/package*.json ./
+
+# Copy compiled JavaScript code
 COPY --from=builder /app/dist ./dist
-# copy node_modules for production
+
+# Create uploads directory for local file storage
+# This directory is used when S3 is not configured
+RUN mkdir -p uploads
+
+# Install only production dependencies
+# This significantly reduces the image size
 RUN npm ci --production=true
+
+# Create non-root user for security
+# Running as root in containers is a security risk
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Expose the application port
 EXPOSE 4000
+
+# Health check for container orchestration
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1
+
+# Start the application
 CMD ["node", "dist/index.js"]

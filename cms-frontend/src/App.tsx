@@ -1,3 +1,39 @@
+/**
+ * @file App.tsx
+ * @description Main Application Component - Root Router Configuration
+ *
+ * This component defines the entire routing structure of the CMS frontend:
+ *
+ * @routes
+ * PUBLIC ROUTES:
+ * - /login - User authentication page
+ * - /* - Dynamic public pages (fetched from backend)
+ *
+ * ADMIN ROUTES (Protected):
+ * - /admin - Dashboard overview
+ * - /admin/pages - Page listing and management
+ * - /admin/pages/builder - Visual page builder (drag-and-drop)
+ * - /admin/pages/builder/:id - Edit existing page in builder
+ * - /admin/media - Image/media asset manager
+ * - /admin/contacts - Contact form submissions
+ * - /admin/site-settings - Global site configuration
+ * - /admin/navbar-settings - Navigation bar customization
+ * - /admin/footer-settings - Footer customization
+ * - /admin/page-code - Code-based page editor
+ *
+ * @authentication
+ * Admin routes are wrapped in ProtectedRoute component which:
+ * - Checks for valid JWT token in localStorage
+ * - Redirects to /login if unauthenticated
+ * - Passes through if authenticated
+ *
+ * @layout
+ * AdminLayout provides consistent sidebar and header for all admin pages.
+ *
+ * @hooks
+ * useSiteFont() - Applies global font family from site config
+ */
+
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -17,6 +53,7 @@ import { useSiteFont } from "./hooks/useSiteFont";
 // import LandingPage from "./pages/LandingPage";
 
 export default function App() {
+  // Apply global font family from site configuration
   useSiteFont();
 
   return (

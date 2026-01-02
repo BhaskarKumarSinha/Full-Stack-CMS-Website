@@ -1,4 +1,34 @@
-// src/middleware/security.middleware.ts
+/**
+ * @file middleware/security.middleware.ts
+ * @description Comprehensive Security Middleware Stack
+ *
+ * This module provides multiple layers of security protection:
+ *
+ * @features
+ * 1. Helmet - Sets secure HTTP headers (CSP, HSTS, X-Frame-Options, etc.)
+ * 2. CORS - Controls cross-origin resource sharing
+ * 3. Rate Limiting - Prevents brute force and DDoS attacks
+ * 4. Speed Limiting - Progressive delay for excessive requests
+ * 5. MongoDB Sanitization - Prevents NoSQL injection attacks
+ *
+ * @configuration
+ * Rate limits are configurable via environment variables:
+ * - RATE_LIMIT_WINDOW_MS: Time window in milliseconds (default: 60000)
+ * - RATE_LIMIT_MAX: Max requests per window (default: 200)
+ * - RATE_LIMIT_STRICT: Strict limit for sensitive endpoints (default: 20)
+ *
+ * @usage
+ * // Apply all security middleware
+ * securityMiddleware().forEach(mw => app.use(mw));
+ *
+ * // Apply specific rate limiters
+ * app.use('/api/auth', strictRateLimiter, authRoutes);
+ *
+ * @security
+ * IMPORTANT: These settings should be reviewed and adjusted
+ * based on your production environment and traffic patterns.
+ */
+
 import express, { RequestHandler } from "express";
 import helmet from "helmet";
 import cors from "cors";

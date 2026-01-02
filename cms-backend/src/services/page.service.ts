@@ -1,4 +1,39 @@
-// src/services/page.service.ts
+/**
+ * @file services/page.service.ts
+ * @description Page Management Service - Core Business Logic
+ *
+ * This service handles all page-related operations:
+ * - CRUD operations for CMS pages
+ * - Page publishing and versioning
+ * - Block validation and rendering
+ * - Redis caching for published pages
+ * - HTML generation from block layouts
+ *
+ * @architecture
+ * The service layer contains business logic and data access,
+ * keeping controllers thin and focused on HTTP concerns.
+ *
+ * @caching
+ * Published pages are cached in Redis for performance:
+ * - Cache TTL: 5 minutes
+ * - Cache invalidation on page update
+ * - Fallback to database if Redis unavailable
+ *
+ * @versioning
+ * Each publish creates a PageVersion snapshot:
+ * - Enables rollback to previous versions
+ * - Maintains audit trail of changes
+ *
+ * @validation
+ * Uses Zod schemas for runtime validation:
+ * - pageCreateSchema for new pages
+ * - blockSchema for layout blocks
+ *
+ * @example
+ * import * as pageService from './services/page.service';
+ * const page = await pageService.createPage({ slug: 'about', path: '/about' });
+ */
+
 import PageModel, { IPage, Block } from "../models/Page";
 import PageVersionModel from "../models/PageVersion";
 import SiteConfig from "../models/SiteConfig";
@@ -8,7 +43,8 @@ import redis from "../utils/redis";
 import { z, ZodError } from "zod";
 import mongoose from "mongoose";
 
-const CACHE_TTL_SECONDS = 60 * 5; // 5 minutes for published page JSON
+/** Cache TTL for published pages in Redis (5 minutes) */
+const CACHE_TTL_SECONDS = 60 * 5;
 
 function escapeHtmlString(str: any) {
   if (str === null || str === undefined) return "";

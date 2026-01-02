@@ -1,5 +1,42 @@
+/**
+ * @file models/Page.ts
+ * @description MongoDB schema for CMS Pages
+ *
+ * This model represents website pages with:
+ * - Block-based layout system for visual page building
+ * - SEO metadata for search engine optimization
+ * - Custom CSS/HTML injection capabilities
+ * - Version tracking for content history
+ * - Draft/Published workflow states
+ *
+ * @schema
+ * Pages use a flexible block-based layout where each block
+ * has a type (hero, text, image, etc.) and props for configuration.
+ *
+ * @workflow
+ * 1. Create page as "draft"
+ * 2. Edit and preview changes
+ * 3. Publish to make publicly accessible
+ * 4. Each publish creates a version snapshot
+ *
+ * @relationships
+ * - createdBy -> User (who created the page)
+ * - updatedBy -> User (who last modified)
+ *
+ * @indexes
+ * - slug: For URL-friendly lookups
+ * - path: Unique constraint for routing
+ */
+
 import mongoose, { Schema, Document } from "mongoose";
 
+/**
+ * Block type definition for page layout
+ * Each block represents a section of the page
+ * @property type - Block type identifier (hero, text, image, video, etc.)
+ * @property title - Optional display title for the block
+ * @property props - Block-specific configuration and content
+ */
 export type Block = {
   type: string;
   title?: string;

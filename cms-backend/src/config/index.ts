@@ -1,3 +1,26 @@
+/**
+ * @file config/index.ts
+ * @description Centralized configuration management for the CMS Backend
+ *
+ * This module handles:
+ * - Environment variable loading and validation
+ * - Default values for development environment
+ * - Type-safe configuration access throughout the application
+ *
+ * @environment
+ * - Development: Uses .env file with fallback defaults
+ * - Test: Uses .env.test file
+ * - Production: Requires all critical variables to be set
+ *
+ * @security
+ * IMPORTANT: Never commit .env files with real credentials
+ * Always use environment variables in production deployments
+ *
+ * @example
+ * import config from './config';
+ * const dbUri = config.MONGODB_URI;
+ */
+
 import dotenv from "dotenv";
 import path from "path";
 dotenv.config();

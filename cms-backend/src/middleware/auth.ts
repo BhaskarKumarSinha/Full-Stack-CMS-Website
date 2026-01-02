@@ -1,4 +1,32 @@
-// src/middleware/auth.ts
+/**
+ * @file middleware/auth.ts
+ * @description Authentication and Authorization Middleware
+ *
+ * This middleware provides:
+ * - JWT token verification for protected routes
+ * - User session injection into request object
+ * - Role-based access control via requireRole()
+ *
+ * @flow
+ * 1. Extract Bearer token from Authorization header
+ * 2. Verify token signature and expiration
+ * 3. Load user from database
+ * 4. Attach user info to request object
+ * 5. Continue to next middleware/handler
+ *
+ * @usage
+ * // Protect a route
+ * router.get('/admin/pages', authMiddleware, handler);
+ *
+ * // Require specific role
+ * router.post('/admin/users', authMiddleware, requireRole('admin'), handler);
+ *
+ * @security
+ * - Tokens expire based on JWT_EXPIRES_IN config
+ * - Invalid tokens return 401 Unauthorized
+ * - Missing roles return 403 Forbidden
+ */
+
 import { Request, Response, NextFunction, RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import UserModel from "../models/User";

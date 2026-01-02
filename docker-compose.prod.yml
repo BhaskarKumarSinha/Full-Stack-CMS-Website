@@ -1,0 +1,171 @@
+# ==============================================================================
+# Production Docker Compose Configuration
+# ==============================================================================
+# This file orchestrates all services for production deployment:
+# - MongoDB: Database server
+# - Redis: Caching layer (optional but recommended)
+# - Backend: Node.js/Express API server
+# - Frontend: React SPA served by Nginx
+#
+# Usage:
+#   docker-compose -f docker-compose.prod.yml up -d --build
+#   docker-compose -f docker-compose.prod.yml down
+#   docker-compose -f docker-compose.prod.yml logs -f
+#
+# Prerequisites:
+#   - Create .env.production file with required variables
+#   - Ensure ports 80, 4000, 27017, 6379 are available
+# ==============================================================================
+
+version: "3.8"
+
+services:
+  # ---------------------------------------------------------------------------
+  # MongoDB Database
+  # Persistent document database for CMS data
+  # ---------------------------------------------------------------------------
+  mongo:
+    image: mongo:6.0
+    container_name: cms-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      # Persist data across container restarts
+      - mongo-data:/data/db
+      # Optional: Initialize with custom scripts
+      # - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    environment:
+      # Uncomment for authentication (recommended in production)
+      # MONGO_INITDB_ROOT_USERNAME: admin
+      # MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
+      MONGO_INITDB_DATABASE: cms
+    networks:
+      - cms-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Redis Cache
+  # In-memory data store for session and page caching
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: cms-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - cms-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # CMS Backend API Server
+  # Node.js/Express application serving the REST API
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./cms-backend
+      dockerfile: dockerfile
+    container_name: cms-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      # Database connection (uses service name for Docker networking)
+      - MONGODB_URI=mongodb://mongo:27017/cms
+      # Redis connection
+      - REDIS_URL=redis://redis:6379
+      # Security - CHANGE THESE IN PRODUCTION!
+      - JWT_SECRET=${JWT_SECRET:-please-change-this-secret-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
+      # CORS configuration
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      # API URLs
+      - API_BASE_URL=${API_BASE_URL:-http://localhost:4000}
+      - FILE_BASE_URL=${FILE_BASE_URL:-http://localhost:4000}
+      # Environment
+      - NODE_ENV=production
+      # Rate limiting
+      - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-60000}
+      - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-200}
+      - RATE_LIMIT_STRICT=${RATE_LIMIT_STRICT:-20}
+      # AWS S3 (optional - for cloud media storage)
+      - AWS_REGION=${AWS_REGION:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - S3_BUCKET=${S3_BUCKET:-}
+    volumes:
+      # Persist uploaded files (when not using S3)
+      - backend-uploads:/app/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cms-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # CMS Frontend (React SPA)
+  # Nginx serving the built React application
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./cms-frontend
+      dockerfile: Dockerfile
+      args:
+        # Pass API URL at build time (Vite embeds this during build)
+        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:4000}
+    container_name: cms-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      # Uncomment for HTTPS (requires SSL certificates)
+      # - "443:443"
+    depends_on:
+      - backend
+    networks:
+      - cms-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+# ==============================================================================
+# Named Volumes
+# Persist data across container restarts and updates
+# ==============================================================================
+volumes:
+  mongo-data:
+    driver: local
+  redis-data:
+    driver: local
+  backend-uploads:
+    driver: local
+
+# ==============================================================================
+# Network Configuration
+# Internal network for service communication
+# ==============================================================================
+networks:
+  cms-network:
+    driver: bridge

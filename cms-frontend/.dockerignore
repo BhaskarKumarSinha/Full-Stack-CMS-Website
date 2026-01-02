@@ -1,0 +1,56 @@
+# ==============================================================================
+# Docker Ignore File for CMS Frontend
+# ==============================================================================
+# Excludes unnecessary files from Docker build context
+# This speeds up builds and reduces image size
+# ==============================================================================
+
+# Dependencies - will be installed in container
+node_modules
+
+# Build output - will be regenerated
+dist
+
+# Environment files - build args used instead
+.env
+.env.local
+.env.production
+
+# Development files
+*.log
+npm-debug.log*
+.npm
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Test files
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files (prevent recursion)
+Dockerfile
+.dockerignore
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# Public assets that shouldn't change
+# Uncomment if you want to exclude large static assets
+# public/videos
+# public/large-images

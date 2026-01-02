@@ -1,9 +1,41 @@
-// src/services/auth.service.ts
+/**
+ * @file services/auth.service.ts
+ * @description Authentication Service - User Authentication & Token Management
+ *
+ * This service provides:
+ * - Password hashing with BCrypt (12 salt rounds)
+ * - Password verification for login
+ * - User creation with duplicate checking
+ * - JWT token generation and verification
+ *
+ * @security
+ * - BCrypt salt rounds: 12 (balance between security and performance)
+ * - JWT tokens include user ID in 'sub' claim
+ * - Token expiration configurable via JWT_EXPIRES_IN
+ *
+ * @usage
+ * // Hash password before storing
+ * const hash = await hashPassword('userPassword123');
+ *
+ * // Verify login credentials
+ * const isValid = await verifyPassword(plainPassword, storedHash);
+ *
+ * // Generate JWT token
+ * const token = generateAccessToken(userId);
+ *
+ * @best-practices
+ * - Never log or expose password hashes
+ * - Always use HTTPS in production
+ * - Rotate JWT_SECRET periodically
+ * - Use short token expiration with refresh tokens
+ */
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import config from "../config";
 import UserModel, { IUser } from "../models/User";
 
+/** BCrypt salt rounds - higher = more secure but slower */
 const SALT_ROUNDS = 12;
 
 export async function hashPassword(plain: string) {

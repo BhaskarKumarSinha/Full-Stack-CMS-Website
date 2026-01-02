@@ -1,4 +1,42 @@
-// src/services/media.service.ts
+/**
+ * @file services/media.service.ts
+ * @description Media Asset Management Service
+ *
+ * This service handles media file operations with dual storage support:
+ *
+ * @storage-modes
+ * 1. AWS S3 Mode (Production recommended)
+ *    - Files uploaded to S3 bucket
+ *    - CDN-ready URLs
+ *    - Presigned URLs for secure uploads
+ *    - Scalable and distributed
+ *
+ * 2. Local Storage Mode (Development)
+ *    - Files saved to /uploads directory
+ *    - Served via Express static middleware
+ *    - No external dependencies
+ *
+ * @features
+ * - Buffer-based file upload
+ * - Presigned URL generation for direct S3 uploads
+ * - Asset deletion from both storage and database
+ * - Automatic filename generation with UUID
+ *
+ * @configuration
+ * S3 mode requires these environment variables:
+ * - AWS_REGION
+ * - AWS_ACCESS_KEY_ID
+ * - AWS_SECRET_ACCESS_KEY
+ * - S3_BUCKET
+ *
+ * @example
+ * // Upload file buffer
+ * const asset = await saveBufferAsMedia(buffer, 'photo.jpg', 'image/jpeg', userId);
+ *
+ * // Get presigned upload URL (S3 only)
+ * const { presignedUrl, finalUrl } = await createPresignedUploadUrl('doc.pdf', 'application/pdf');
+ */
+
 import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
@@ -11,7 +49,7 @@ import {
   deleteFromS3,
 } from "../utils/s3";
 
-// Use project-level uploads folder (one level above src)
+/** Local uploads directory path (when S3 is not configured) */
 const UPLOADS_DIR = path.join(__dirname, "..", "..", "uploads");
 
 /**
