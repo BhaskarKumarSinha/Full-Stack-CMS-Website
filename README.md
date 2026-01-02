@@ -181,7 +181,7 @@ NODE_ENV=development
 PORT=4000
 
 # MongoDB Configuration
-MONGODB_URI=mongodb://localhost:27017/cmsdb
+MONGODB_URI="YOUR_MONGODB_URI"
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
