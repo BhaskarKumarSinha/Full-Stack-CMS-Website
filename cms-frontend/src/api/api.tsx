@@ -71,6 +71,15 @@ export default {
       layout: any[];
       published: boolean;
       seo: any;
+      customCss: string;
+      customHtml: string;
+      customHtmlPosition:
+        | "start"
+        | "after-nav"
+        | "before-footer"
+        | "end"
+        | "after-selector";
+      customHtmlSelector: string;
     }>
   ) => client.put(`${endpoints.pages}/${id}`, body),
   deletePage: (id: string) => client.delete(`${endpoints.pages}/${id}`),
@@ -90,8 +99,11 @@ export default {
   getRenderedFooter: () => client.get(`${endpoints.siteConfig}/render-footer`),
   refreshPublishedPages: () =>
     client.post(`${endpoints.siteConfig}/refresh-pages`),
-  updateSiteConfig: (body: { navConfig?: any; footerConfig?: any }) =>
-    client.put(endpoints.siteConfig, body),
+  updateSiteConfig: (body: {
+    navConfig?: any;
+    footerConfig?: any;
+    fontFamily?: string;
+  }) => client.put(endpoints.siteConfig, body),
   listMedia: () => client.get("/api/media"),
   uploadMedia: (formData: FormData) =>
     client.post("/api/media/upload", formData, {

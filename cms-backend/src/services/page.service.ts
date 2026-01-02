@@ -372,6 +372,7 @@ export async function getPageByPath(path: string, includeDrafts = false) {
       const navText = ns.textColor || "#0f172a";
       const navHoverBg = ns.hoverBackground || "#f8fafc";
       const navHoverText = ns.hoverTextColor || "#0f172a";
+      const activeChildBg = ns.activeChildBackground || navHoverBg; // Active/hover background for child menu items
       const hoverEffect = ns.hoverEffect || "underline";
       const navEffectUnderline =
         hoverEffect === "underline" || hoverEffect === "underline-and-bg";
@@ -389,45 +390,56 @@ export async function getPageByPath(path: string, includeDrafts = false) {
       const underlineDelayMs =
         typeof ns.underlineDelayMs === "number" ? ns.underlineDelayMs : 50;
 
+      // Generate unique ID for this nav instance
+      const navId = `site-nav-${Math.random().toString(36).slice(2, 8)}`;
+
       const navHtml = `
-<nav class="nav" style="background: ${escapeHtmlString(navBg)};">
+<nav id="${navId}" class="site-nav" data-open="false" style="background: ${escapeHtmlString(
+        navBg
+      )};">
   <style>
-    /* Base nav layout and responsive behavior */
-    .nav { position: sticky; top: 0; z-index: 1200; width: 100%; background: ${escapeHtmlString(
-      navBg
-    )}; box-shadow: 0 1px 6px rgba(2,6,23,0.06); }
-    .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 1rem; gap: 1rem; }
-    .nav-left { display: flex; align-items: center; gap: 0.75rem; }
-    .nav-logo { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; display: block; }
-    .nav-brand-text { font-weight: 700; color: ${escapeHtmlString(
-      navText
-    )}; font-size: 1.05rem; line-height: 1; }
-    .nav-toggle { display: none; background: none; border: none; font-size: 1.25rem; cursor: pointer; color: ${escapeHtmlString(
-      navText
-    )}; }
-
-    /* Links container */
-    .nav-links { display: flex; align-items: center; }
-    .nav-links-inner { display: flex; align-items: center; gap: 0.5rem; }
-
-    /* Top-level link / item styling */
-    .nav-links-inner > * { display: flex; align-items: center; }
-    .nav-links-inner a, .nav-links-inner .dropdown-toggle { padding: 0.5rem 0.75rem; border-radius: 8px; color: ${escapeHtmlString(
-      navText
-    )}; text-decoration: none; font-weight: 500; line-height: 1; position: relative; padding-bottom: 4px; }
-    .nav-links-inner a:hover, .nav-links-inner .dropdown-toggle:hover { background: ${escapeHtmlString(
-      bgOnHover ? navHoverBg : "transparent"
-    )}; color: ${escapeHtmlString(
-        navTextChangeOnHover ? navHoverText : navText
+    /* Base nav layout */
+    #${navId}.site-nav { position: sticky; top: 0; z-index: 1200; width: 100%; background: ${escapeHtmlString(
+        navBg
+      )}; box-shadow: 0 1px 6px rgba(2,6,23,0.06); padding: 0.75rem; }
+    #${navId} .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    #${navId} .nav-left { display: flex; align-items: center; gap: 0.75rem; }
+    #${navId} .nav-logo { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; display: block; }
+    #${navId} .nav-brand-text { font-weight: 700; color: ${escapeHtmlString(
+        navText
+      )}; font-size: 1.05rem; line-height: 1; }
+    #${navId} .nav-toggle { display: none; background: none; border: none; font-size: 1.25rem; cursor: pointer; color: ${escapeHtmlString(
+        navText
       )}; }
 
-    /* Underline effect (pseudo-element) */
-    .nav-links-inner a::after, .nav-links-inner .dropdown-toggle::after {
+    /* Links container */
+    #${navId} .nav-links { display: flex; align-items: center; }
+    #${navId} .nav-links-inner { display: flex; align-items: center; gap: 0.5rem; }
+
+    /* Top-level link styling */
+    #${navId} .nav-links-inner > a, #${navId} .nav-links-inner .dropdown-toggle { 
+      padding: 0.5rem 0.75rem; 
+      border-radius: 8px; 
+      color: ${escapeHtmlString(navText)}; 
+      background: ${escapeHtmlString(navBg)};
+      text-decoration: none; 
+      font-weight: 500; 
+      line-height: 1; 
+      position: relative; 
+      cursor: pointer; 
+    }
+    #${navId} .nav-links-inner > a:hover, #${navId} .nav-links-inner .dropdown-toggle:hover { 
+      background: ${escapeHtmlString(bgOnHover ? navHoverBg : navBg)}; 
+      color: ${escapeHtmlString(
+        navTextChangeOnHover ? navHoverText : navText
+      )}; 
+    }
+
+    /* Underline effect */
+    #${navId} .nav-links-inner > a::after, #${navId} .nav-links-inner .dropdown-toggle::after {
       content: "";
       position: absolute;
-      left: 8px;
-      right: 8px;
-      bottom: 2px;
+      left: 8px; right: 8px; bottom: 2px;
       height: ${
         navEffectUnderline
           ? escapeHtmlString(String(underlineThickness) + "px")
@@ -444,40 +456,97 @@ export async function getPageByPath(path: string, includeDrafts = false) {
       border-radius: 2px;
       pointer-events: none;
     }
-    .nav-links-inner a:hover::after, .nav-links-inner a.active::after, .nav-links-inner .dropdown-toggle:hover::after, .nav-links-inner .dropdown-toggle.active::after { transform: scaleX(1); }
+    #${navId} .nav-links-inner > a:hover::after, #${navId} .nav-links-inner .dropdown-toggle:hover::after { transform: scaleX(1); }
 
-    /* Dropdown container and items */
-    .nav-item { position: relative; }
-    .dropdown-menu { position: absolute; top: calc(100% + 6px); left: 0; display: none; background: #ffffff; padding: 0.25rem 0; border-radius: 8px; box-shadow: 0 8px 24px rgba(2,6,23,0.08); min-width: 12rem; z-index: 2000; }
-    .nav-item:hover > .dropdown-menu { display: block; }
-    .nav-item.open > .dropdown-menu { display: block; }
-    .nav-item.open > .dropdown-toggle { background: ${escapeHtmlString(
-      bgOnHover ? navHoverBg : "transparent"
-    )}; color: ${escapeHtmlString(
+    /* Dropdown container */
+    #${navId} .nav-item { position: relative; display: flex; flex-direction: column; }
+    #${navId} .dropdown-menu { 
+      position: absolute; 
+      top: calc(100% + 6px); 
+      left: 0; 
+      display: none; 
+      flex-direction: column;
+      background: ${escapeHtmlString(navBg)}; 
+      padding: 0.25rem 0; 
+      border-radius: 8px; 
+      box-shadow: 0 8px 24px rgba(2,6,23,0.12); 
+      min-width: 12rem; 
+      z-index: 2000; 
+    }
+    #${navId} .nav-item:hover > .dropdown-menu { display: flex; }
+    #${navId} .nav-item[data-open="true"] > .dropdown-menu { display: flex !important; }
+    
+    /* Child menu links - same styling as parent */
+    #${navId} .dropdown-menu .dropdown-link { 
+      display: block; 
+      padding: 0.6rem 1rem; 
+      color: ${escapeHtmlString(navText)}; 
+      background: ${escapeHtmlString(navBg)};
+      text-decoration: none; 
+      white-space: nowrap;
+      font-weight: 500;
+    }
+    #${navId} .dropdown-menu .dropdown-link:hover { 
+      background: ${escapeHtmlString(activeChildBg)}; 
+      color: ${escapeHtmlString(
         navTextChangeOnHover ? navHoverText : navText
-      )}; }
-    .nav-item.open > .dropdown-toggle::after { transform: scaleX(1); }
-    .dropdown-menu .dropdown-link { display: block; padding: 0.5rem 1rem; color: #0f172a; text-decoration: none; white-space: nowrap; }
-    .dropdown-menu .dropdown-link:hover { background: ${escapeHtmlString(
-      navHoverBg
-    )}; color: ${escapeHtmlString(
-        navTextChangeOnHover ? navHoverText : navText
-      )}; }
+      )}; 
+    }
 
-    /* Active link */
-    .nav-links-inner a.active, .nav-links-inner .dropdown-toggle.active { background: ${escapeHtmlString(
-      bgOnHover ? "#e6f0ff" : "transparent"
-    )}; color: ${escapeHtmlString(bgOnHover ? "#2563eb" : underlineColor)}; }
-
-    .nav-cta { margin-left: 1rem; padding: 0.5rem 0.9rem; background: #2563eb; color: white; border-radius: 8px; font-weight: 600; text-decoration: none; box-shadow: 0 6px 18px rgba(37,99,235,0.12); }
-
+    /* Mobile styles */
     @media (max-width: 768px) {
-      .nav-toggle { display: block; }
-      .nav-links { position: fixed; top: 64px; right: 12px; background: white; box-shadow: 0 8px 24px rgba(2,6,23,0.08); flex-direction: column; padding: 0.75rem; border-radius: 8px; display: none; min-width: 200px; }
-      .nav-links.active { display: flex; }
-      .nav-links-inner { flex-direction: column; gap: 0; }
-      .nav-links-inner a, .nav-links-inner .dropdown-toggle { display: block; padding: 0.75rem 1rem; }
-      .nav-cta { display: block; margin: 0.5rem 0 0 0; width: calc(100% - 2rem); text-align: center; }
+      #${navId} .nav-toggle { display: block; }
+      #${navId} .nav-links { 
+        position: fixed; 
+        top: 64px; 
+        right: 12px; 
+        background: ${escapeHtmlString(navBg)}; 
+        box-shadow: 0 8px 24px rgba(2,6,23,0.12); 
+        flex-direction: column; 
+        padding: 0.5rem; 
+        border-radius: 8px; 
+        display: none; 
+        min-width: 220px; 
+        z-index: 1500; 
+      }
+      #${navId}[data-open="true"] .nav-links { display: flex; }
+      #${navId} .nav-links-inner { flex-direction: column; gap: 0; width: 100%; }
+      #${navId} .nav-links-inner > a, #${navId} .nav-links-inner .dropdown-toggle { 
+        display: block; 
+        padding: 0.75rem 1rem; 
+        width: 100%; 
+        text-align: left; 
+        background: ${escapeHtmlString(navBg)}; 
+        color: ${escapeHtmlString(navText)}; 
+        border-radius: 6px;
+      }
+      #${navId} .nav-item { width: 100%; display: flex; flex-direction: column; }
+      /* Child menu on mobile - below parent, full width, indented */
+      #${navId} .dropdown-menu { 
+        position: static !important; 
+        top: auto !important;
+        left: auto !important;
+        box-shadow: none; 
+        padding: 0;
+        margin: 0;
+        margin-left: 1rem;
+        border-radius: 0;
+        background: ${escapeHtmlString(navBg)}; 
+        width: calc(100% - 1rem);
+        border-left: 2px solid ${escapeHtmlString(navHoverBg)};
+      }
+      #${navId} .dropdown-menu .dropdown-link { 
+        padding: 0.6rem 1rem; 
+        color: ${escapeHtmlString(navText)}; 
+        background: ${escapeHtmlString(navBg)};
+        border-radius: 0;
+      }
+      #${navId} .dropdown-menu .dropdown-link:hover {
+        background: ${escapeHtmlString(activeChildBg)};
+        color: ${escapeHtmlString(
+          navTextChangeOnHover ? navHoverText : navText
+        )};
+      }
     }
   </style>
   <div class="nav-inner">
@@ -493,15 +562,68 @@ export async function getPageByPath(path: string, includeDrafts = false) {
         nav.brandName || ""
       )}</span>
     </div>
-    <button class="nav-toggle" onclick="(function(){var l=document.querySelector('.nav-links'); if(l){l.classList.toggle('active');}})()" aria-label="Toggle navigation">☰</button>
+    <button class="nav-toggle" aria-label="Toggle navigation">☰</button>
     <div class="nav-links"><div class="nav-links-inner">${renderNavItems(
       nav.navItems || []
     )}</div></div>
   </div>
-</nav>`;
+</nav>
+<script>
+(function(){
+  try {
+    var nav = document.getElementById('${navId}');
+    if (!nav) return;
+    var btn = nav.querySelector('.nav-toggle');
+    var setOpen = function(open) {
+      nav.setAttribute('data-open', open ? 'true' : 'false');
+      if (btn) btn.textContent = open ? '✕' : '☰';
+    };
+    if (btn) {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        setOpen(nav.getAttribute('data-open') !== 'true');
+      });
+    }
+    // Handle dropdown clicks for touch devices
+    var dropdownToggles = nav.querySelectorAll('.nav-item .dropdown-toggle');
+    dropdownToggles.forEach(function(toggle) {
+      toggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var parent = toggle.parentElement;
+        var isOpen = parent.getAttribute('data-open') === 'true';
+        // Close all other dropdowns
+        nav.querySelectorAll('.nav-item[data-open="true"]').forEach(function(item) {
+          if (item !== parent) item.setAttribute('data-open', 'false');
+        });
+        parent.setAttribute('data-open', isOpen ? 'false' : 'true');
+      });
+    });
+    // Close menu when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!nav.contains(e.target)) {
+        setOpen(false);
+        nav.querySelectorAll('.nav-item[data-open="true"]').forEach(function(item) {
+          item.setAttribute('data-open', 'false');
+        });
+      }
+    });
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        nav.querySelectorAll('.nav-item[data-open="true"]').forEach(function(item) {
+          item.setAttribute('data-open', 'false');
+        });
+      }
+    });
+  } catch(err) { console.warn('Nav init error:', err); }
+})();
+</script>`;
 
-      // Replace first occurrence of <nav class="nav">...</nav> with generated navHtml
-      const navRegex = /<nav\s+class=(?:"|'|)nav(?:"|'|)[\s\S]*?<\/nav>/i;
+      // Replace first occurrence of <nav ...>...</nav> with generated navHtml
+      // Match any <nav> tag regardless of attributes (class="nav", class="site-nav", id=..., etc)
+      const navRegex = /<nav[^>]*>[\s\S]*?<\/nav>/i;
       if (navRegex.test(sanitizedContent)) {
         sanitizedContent = sanitizedContent.replace(navRegex, navHtml);
       } else {
@@ -725,6 +847,223 @@ export async function getPageByPath(path: string, includeDrafts = false) {
   } catch (err) {
     // Non-fatal: if SiteConfig isn't available, continue with stored content
     logger && logger.warn && logger.warn("Failed to inject site nav:", err);
+  }
+
+  // Inject custom CSS if present
+  if (page.customCss) {
+    const customCssStyle = `<style id="custom-page-css">\n${page.customCss}\n</style>`;
+    // Insert before </head> if it exists, otherwise prepend to content
+    if (/<\/head>/i.test(sanitizedContent)) {
+      sanitizedContent = sanitizedContent.replace(
+        /<\/head>/i,
+        customCssStyle + "</head>"
+      );
+    } else {
+      sanitizedContent = customCssStyle + sanitizedContent;
+    }
+  }
+
+  // Inject global font family from SiteConfig - MUST be last so it overrides everything
+  try {
+    const siteConfig = await SiteConfig.findOne().lean();
+    const fontFamily = (siteConfig && siteConfig.fontFamily) || "Roboto";
+
+    // Map font names to Google Fonts stack
+    const fontStacks: Record<string, string> = {
+      Roboto: "'Roboto', sans-serif",
+      "Open Sans": "'Open Sans', sans-serif",
+      Rubik: "'Rubik', sans-serif",
+      "DM Sans": "'DM Sans', sans-serif",
+    };
+
+    const fontStack = fontStacks[fontFamily] || "'Roboto', sans-serif";
+
+    const fontCss = `<style id="site-font-css">
+      html, body, *, :root, :host {
+        font-family: ${fontStack} !important;
+      }
+      :root {
+        --site-font-family: ${fontStack} !important;
+        --default-font-family: ${fontStack} !important;
+        --font-sans: ${fontStack} !important;
+      }
+    </style>`;
+
+    // Insert RIGHT BEFORE </body> closing tag as the VERY LAST thing
+    // This ensures it overrides all previous font declarations
+    if (/<\/body>/i.test(sanitizedContent)) {
+      sanitizedContent = sanitizedContent.replace(
+        /<\/body>/i,
+        fontCss + "</body>"
+      );
+    } else if (/<\/html>/i.test(sanitizedContent)) {
+      // If no body tag, insert before </html>
+      sanitizedContent = sanitizedContent.replace(
+        /<\/html>/i,
+        fontCss + "</html>"
+      );
+    } else {
+      // Fallback: append to end of content
+      sanitizedContent = sanitizedContent + fontCss;
+    }
+  } catch (err) {
+    // Non-fatal: if font injection fails, continue without custom font
+    logger && logger.warn && logger.warn("Failed to inject site font:", err);
+  }
+
+  // Inject custom HTML if present based on position setting
+  if (page.customHtml) {
+    const position = page.customHtmlPosition || "start";
+    const customHtmlBlock = `\n<!-- Custom HTML Start -->\n${page.customHtml}\n<!-- Custom HTML End -->\n`;
+
+    switch (position) {
+      case "end":
+        // Insert before </body>
+        if (/<\/body>/i.test(sanitizedContent)) {
+          sanitizedContent = sanitizedContent.replace(
+            /<\/body>/i,
+            customHtmlBlock + "</body>"
+          );
+        } else {
+          sanitizedContent = sanitizedContent + customHtmlBlock;
+        }
+        break;
+
+      case "after-nav":
+        // Insert after closing </nav> tag
+        if (/<\/nav>/i.test(sanitizedContent)) {
+          sanitizedContent = sanitizedContent.replace(
+            /<\/nav>/i,
+            "</nav>" + customHtmlBlock
+          );
+        } else {
+          // Fallback to after <body> if no nav found
+          if (/<body[^>]*>/i.test(sanitizedContent)) {
+            sanitizedContent = sanitizedContent.replace(
+              /(<body[^>]*>)/i,
+              "$1" + customHtmlBlock
+            );
+          } else {
+            sanitizedContent = customHtmlBlock + sanitizedContent;
+          }
+        }
+        break;
+
+      case "before-footer":
+        // Insert before <footer> tag
+        if (/<footer[^>]*>/i.test(sanitizedContent)) {
+          sanitizedContent = sanitizedContent.replace(
+            /(<footer[^>]*>)/i,
+            customHtmlBlock + "$1"
+          );
+        } else {
+          // Fallback to before </body> if no footer found
+          if (/<\/body>/i.test(sanitizedContent)) {
+            sanitizedContent = sanitizedContent.replace(
+              /<\/body>/i,
+              customHtmlBlock + "</body>"
+            );
+          } else {
+            sanitizedContent = sanitizedContent + customHtmlBlock;
+          }
+        }
+        break;
+
+      case "after-selector":
+        // Insert after a custom CSS selector (element)
+        if (page.customHtmlSelector) {
+          // Convert CSS selector to regex pattern for common selectors
+          // Supports: #id, .class, tagname, [attribute]
+          const selector = page.customHtmlSelector.trim();
+          let matched = false;
+
+          // Handle ID selector (#id)
+          if (selector.startsWith("#")) {
+            const id = selector.slice(1);
+            const idRegex = new RegExp(
+              `(<[^>]+\\sid=["']${id}["'][^>]*>)([\\s\\S]*?)(</[^>]+>)`,
+              "i"
+            );
+            if (idRegex.test(sanitizedContent)) {
+              // Find the element with this ID and insert after its closing tag
+              const fullElementRegex = new RegExp(
+                `(<[^>]+\\sid=["']${id}["'][^>]*>[\\s\\S]*?<\\/[^>]+>)`,
+                "i"
+              );
+              sanitizedContent = sanitizedContent.replace(
+                fullElementRegex,
+                "$1" + customHtmlBlock
+              );
+              matched = true;
+            }
+          }
+          // Handle class selector (.class)
+          else if (selector.startsWith(".")) {
+            const className = selector.slice(1);
+            const classRegex = new RegExp(
+              `(<[^>]+\\sclass=["'][^"']*\\b${className}\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/[^>]+>)`,
+              "i"
+            );
+            if (classRegex.test(sanitizedContent)) {
+              sanitizedContent = sanitizedContent.replace(
+                classRegex,
+                "$1" + customHtmlBlock
+              );
+              matched = true;
+            }
+          }
+          // Handle element selector (div, section, etc.)
+          else if (/^[a-zA-Z][a-zA-Z0-9]*$/.test(selector)) {
+            const tagRegex = new RegExp(
+              `(<${selector}[^>]*>[\\s\\S]*?<\\/${selector}>)`,
+              "i"
+            );
+            if (tagRegex.test(sanitizedContent)) {
+              sanitizedContent = sanitizedContent.replace(
+                tagRegex,
+                "$1" + customHtmlBlock
+              );
+              matched = true;
+            }
+          }
+
+          // Fallback to after <body> if selector not found
+          if (!matched) {
+            if (/<body[^>]*>/i.test(sanitizedContent)) {
+              sanitizedContent = sanitizedContent.replace(
+                /(<body[^>]*>)/i,
+                "$1" + customHtmlBlock
+              );
+            } else {
+              sanitizedContent = customHtmlBlock + sanitizedContent;
+            }
+          }
+        } else {
+          // No selector provided, fallback to start
+          if (/<body[^>]*>/i.test(sanitizedContent)) {
+            sanitizedContent = sanitizedContent.replace(
+              /(<body[^>]*>)/i,
+              "$1" + customHtmlBlock
+            );
+          } else {
+            sanitizedContent = customHtmlBlock + sanitizedContent;
+          }
+        }
+        break;
+
+      case "start":
+      default:
+        // Insert after <body> (original behavior)
+        if (/<body[^>]*>/i.test(sanitizedContent)) {
+          sanitizedContent = sanitizedContent.replace(
+            /(<body[^>]*>)/i,
+            "$1" + customHtmlBlock
+          );
+        } else {
+          sanitizedContent = customHtmlBlock + sanitizedContent;
+        }
+        break;
+    }
   }
 
   if (!includeDrafts && page.status === "published") {

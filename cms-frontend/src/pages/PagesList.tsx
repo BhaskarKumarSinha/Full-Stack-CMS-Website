@@ -103,12 +103,6 @@ export default function PagesList() {
               placeholder="Search pages by title, path or slug"
               className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-200"
             />
-            <Link
-              to="/admin/pages/new"
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700"
-            >
-              ➕ New Page
-            </Link>
           </div>
         </div>
 

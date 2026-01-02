@@ -86,10 +86,10 @@ export async function getSiteConfig(req: Request, res: Response) {
 // PUT /api/site-config
 export async function updateSiteConfig(req: Request, res: Response) {
   try {
-    const { navConfig, footerConfig } = req.body;
+    const { navConfig, footerConfig, fontFamily } = req.body;
     let config = await SiteConfig.findOne();
     if (!config) {
-      config = await SiteConfig.create({ navConfig, footerConfig });
+      config = await SiteConfig.create({ navConfig, footerConfig, fontFamily });
     } else {
       // Merge fields to avoid dropping navStyle or other nested props
       config.navConfig = { ...(config.navConfig || {}), ...(navConfig || {}) };
@@ -110,6 +110,10 @@ export async function updateSiteConfig(req: Request, res: Response) {
       // If the incoming update contains structured footerSections, replace them
       if (footerConfig && Array.isArray(footerConfig.footerSections)) {
         config.footerConfig.footerSections = footerConfig.footerSections;
+      }
+      // Update font family if provided
+      if (fontFamily) {
+        config.fontFamily = fontFamily;
       }
       config.updatedAt = new Date();
       await config.save();

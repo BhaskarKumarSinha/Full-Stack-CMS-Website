@@ -27,15 +27,6 @@ export default function AdminDashboard() {
           </div>
         </Link>
 
-        <Link to="/admin/pages/simple" className="block">
-          <div className="rounded-lg border bg-white p-6 shadow hover:shadow-md transition">
-            <h2 className="text-lg font-semibold">New Page</h2>
-            <p className="text-sm text-gray-500 mt-2">
-              Create a new page for the site
-            </p>
-          </div>
-        </Link>
-
         <Link to="/admin/media" className="block">
           <div className="rounded-lg border bg-white p-6 shadow hover:shadow-md transition">
             <h2 className="text-lg font-semibold">Image Manager</h2>

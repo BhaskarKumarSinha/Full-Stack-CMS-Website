@@ -8,6 +8,7 @@ type NavStyle = {
   textColor?: string;
   hoverBackground?: string;
   hoverTextColor?: string;
+  activeChildBackground?: string;
   hoverEffect?: "underline" | "background" | "underline-and-bg" | "text-color";
   underlineColor?: string;
   underlineThickness?: number;
@@ -27,6 +28,7 @@ export default function NavbarSettings() {
     textColor: "#0f172a",
     hoverBackground: "#f8fafc",
     hoverTextColor: "#0f172a",
+    activeChildBackground: "#f1f5f9",
     hoverEffect: "underline",
     underlineColor: "#2563eb",
     underlineThickness: 2,
@@ -365,6 +367,34 @@ export default function NavbarSettings() {
                 }
                 className="w-16 h-9 p-0 border rounded"
               />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm mb-1">
+                Active Child Background
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={
+                    (navConfig as any).navStyle?.activeChildBackground ||
+                    defaultNavStyle.activeChildBackground
+                  }
+                  onChange={(e) =>
+                    setNavConfig({
+                      ...navConfig,
+                      navStyle: {
+                        ...(navConfig as any).navStyle,
+                        activeChildBackground: e.target.value,
+                      },
+                    })
+                  }
+                  className="w-16 h-9 p-0 border rounded"
+                />
+                <span className="text-xs text-gray-500">
+                  Hover/active background for child menu items
+                </span>
+              </div>
             </div>
 
             <div className="col-span-2">

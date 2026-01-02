@@ -120,6 +120,7 @@ export default function PageBuilder() {
     underlineThickness: 2,
     underlineTransitionMs: 220,
     underlineDelayMs: 50,
+    activeChildBackground: "#f1f5f9",
   };
 
   const defaultFooterStyle = {
@@ -186,59 +187,134 @@ export default function PageBuilder() {
     }
   };
 
-  // Load site config from localStorage (saved by NavbarSettings) so preview matches
-  // the navbar settings page when available.
-  useState(() => {
-    try {
-      const raw = localStorage.getItem("cms_site_config");
-      if (raw) {
-        const parsed = JSON.parse(raw || "{}");
-        if (parsed && parsed.navConfig) {
-          const merged = {
-            ...navConfig,
-            ...parsed.navConfig,
-            navStyle: {
-              ...defaultNavStyle,
-              ...(parsed.navConfig.navStyle || {}),
-            },
-          };
-          _setNavConfig(merged);
-          setNavHtml(renderNavHtml(merged));
-        }
-      }
-    } catch (e) {
-      /* ignore */
-    }
-  });
-
   const setFooterConfig = (next: any) => {
     _setFooterConfig(next);
     setFooterHtml(renderFooterHtml(next, footerSectionsText));
   };
 
-  // Load saved footer config from localStorage (if Navbar/Footer settings saved together)
-  useState(() => {
-    try {
-      const raw = localStorage.getItem("cms_site_config");
-      if (raw) {
-        const parsed = JSON.parse(raw || "{}");
-        if (parsed && parsed.footerConfig) {
-          const merged = {
-            ...footerConfig,
-            ...parsed.footerConfig,
-            footerStyle: {
-              ...defaultFooterStyle,
-              ...(parsed.footerConfig.footerStyle || {}),
-            },
-          };
-          _setFooterConfig(merged);
-          setFooterHtml(renderFooterHtml(merged, footerSectionsText));
+  // Fetch site config from API on mount to ensure we have the latest nav/footer settings
+  // This ensures changes made in NavbarSettings or FooterSettings are reflected immediately
+  useEffect(() => {
+    const fetchSiteConfig = async () => {
+      try {
+        const res = await api.getSiteConfig();
+        if (res && res.data) {
+          const siteConfig = res.data;
+
+          // Update nav config if available
+          if (siteConfig.navConfig) {
+            const mergedNav = {
+              ...navConfig,
+              ...siteConfig.navConfig,
+              navStyle: {
+                ...defaultNavStyle,
+                ...(siteConfig.navConfig.navStyle || {}),
+              },
+            };
+            _setNavConfig(mergedNav);
+            setNavHtml(renderNavHtml(mergedNav));
+          }
+
+          // Update footer config if available
+          if (siteConfig.footerConfig) {
+            const mergedFooter = {
+              ...footerConfig,
+              ...siteConfig.footerConfig,
+              footerStyle: {
+                ...defaultFooterStyle,
+                ...(siteConfig.footerConfig.footerStyle || {}),
+              },
+            };
+            _setFooterConfig(mergedFooter);
+            setFooterHtml(renderFooterHtml(mergedFooter, footerSectionsText));
+          }
+
+          // Also update localStorage for consistency
+          try {
+            localStorage.setItem("cms_site_config", JSON.stringify(siteConfig));
+          } catch (e) {
+            /* ignore localStorage errors */
+          }
+        }
+      } catch (err) {
+        console.warn(
+          "Failed to fetch site config from API, falling back to localStorage:",
+          err
+        );
+        // Fallback to localStorage if API fails
+        try {
+          const raw = localStorage.getItem("cms_site_config");
+          if (raw) {
+            const parsed = JSON.parse(raw || "{}");
+            if (parsed && parsed.navConfig) {
+              const merged = {
+                ...navConfig,
+                ...parsed.navConfig,
+                navStyle: {
+                  ...defaultNavStyle,
+                  ...(parsed.navConfig.navStyle || {}),
+                },
+              };
+              _setNavConfig(merged);
+              setNavHtml(renderNavHtml(merged));
+            }
+            if (parsed && parsed.footerConfig) {
+              const merged = {
+                ...footerConfig,
+                ...parsed.footerConfig,
+                footerStyle: {
+                  ...defaultFooterStyle,
+                  ...(parsed.footerConfig.footerStyle || {}),
+                },
+              };
+              _setFooterConfig(merged);
+              setFooterHtml(renderFooterHtml(merged, footerSectionsText));
+            }
+          }
+        } catch (e) {
+          /* ignore */
         }
       }
-    } catch (e) {
-      /* ignore */
-    }
-  });
+    };
+
+    fetchSiteConfig();
+
+    // Listen for site-config-updated events (fired by NavbarSettings/FooterSettings)
+    const handleSiteConfigUpdate = (e: any) => {
+      const siteConfig = e.detail;
+      if (siteConfig) {
+        if (siteConfig.navConfig) {
+          const mergedNav = {
+            ...navConfig,
+            ...siteConfig.navConfig,
+            navStyle: {
+              ...defaultNavStyle,
+              ...(siteConfig.navConfig.navStyle || {}),
+            },
+          };
+          _setNavConfig(mergedNav);
+          setNavHtml(renderNavHtml(mergedNav));
+        }
+        if (siteConfig.footerConfig) {
+          const mergedFooter = {
+            ...footerConfig,
+            ...siteConfig.footerConfig,
+            footerStyle: {
+              ...defaultFooterStyle,
+              ...(siteConfig.footerConfig.footerStyle || {}),
+            },
+          };
+          _setFooterConfig(mergedFooter);
+          setFooterHtml(renderFooterHtml(mergedFooter, footerSectionsText));
+        }
+      }
+    };
+
+    window.addEventListener("site-config-updated", handleSiteConfigUpdate);
+    return () => {
+      window.removeEventListener("site-config-updated", handleSiteConfigUpdate);
+    };
+  }, []);
 
   function renderNavHtml(c: any) {
     const brand = c?.brandName || "";
@@ -282,7 +358,8 @@ export default function PageBuilder() {
     const underlineDelay = Number(
       style.underlineDelayMs || defaultNavStyle.underlineDelayMs || 50
     );
-
+    const activeChildBg =
+      style.activeChildBackground || style.hoverBackground || "#f1f5f9";
     // add a unique id for this nav so the script targets it reliably
     const navId = `site-nav-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -295,27 +372,28 @@ export default function PageBuilder() {
       .site-nav .brand{font-weight:700;display:flex;align-items:center;gap:.5rem}
 
       /* Responsive: keep brand and button on one line; hide nav items until opened */
-      @media (max-width: 640px){
+      @media (max-width: 768px){
         .site-nav > div{flex-direction:row;align-items:center;position:relative}
         /* hidden by default on mobile (will be shown when hamburger opens) */
-        .site-nav .nav-items{display:none !important;position:absolute;right:0;top:calc(100% + 6px);min-width:160px;background:${style.backgroundColor};padding:0.25rem;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.12);z-index:60}
+        .site-nav .nav-items{display:none !important;position:fixed;right:12px;top:64px;min-width:220px;background:${style.backgroundColor};padding:0.5rem;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:1500}
         /* show dropdown when open (anchored near the button) */
-        .site-nav[data-open="true"] .nav-items{display:flex !important;flex-direction:column;gap:0.25rem}
+        .site-nav[data-open="true"] .nav-items{display:flex !important;flex-direction:column;gap:0}
         /* top-level links on mobile: full-width, inherit nav colors */
-        #${navId} .nav-link{padding:0.6rem 0.9rem;border-radius:4px;text-align:left;font-size:0.98rem;background:${style.backgroundColor} !important;color:${style.textColor} !important;display:block;width:100%}
+        #${navId} .nav-link{padding:0.75rem 1rem;border-radius:6px;text-align:left;font-size:0.98rem;background:${style.backgroundColor} !important;color:${style.textColor} !important;display:block;width:100%}
         /* child links should match top-level link styling on mobile for this nav */
-        #${navId} .child-menu a, #${navId} .child-link{display:block;width:100%;padding:0.6rem 0.9rem;color:${style.textColor} !important;background:${style.backgroundColor} !important;text-decoration:none}
+        #${navId} .child-menu a, #${navId} .child-link{display:block;width:100%;padding:0.6rem 1rem;color:${style.textColor} !important;background:${style.backgroundColor} !important;text-decoration:none;border-radius:0}
+        #${navId} .child-link:hover{background:${activeChildBg} !important}
         .mobile-menu-button{margin-left:0.5rem}
       }
     `;
 
-    // Hover behaviors (apply same to child links)
+    // Hover behaviors (apply same to child links with activeChildBg)
     if (hoverEffect === "background") {
       css += `#${navId} .nav-link:hover{background:${style.hoverBackground} !important;color:${style.hoverTextColor} !important;}`;
-      css += `#${navId} .child-link:hover{background:${style.hoverBackground} !important;color:${style.hoverTextColor} !important;}`;
+      css += `#${navId} .child-link:hover{background:${activeChildBg} !important;color:${style.hoverTextColor} !important;}`;
     } else if (hoverEffect === "text-color") {
       css += `#${navId} .nav-link:hover{color:${style.hoverTextColor} !important;}`;
-      css += `#${navId} .child-link:hover{color:${style.hoverTextColor} !important;}`;
+      css += `#${navId} .child-link:hover{background:${activeChildBg} !important;color:${style.hoverTextColor} !important;}`;
     } else if (
       hoverEffect === "underline" ||
       hoverEffect === "underline-and-bg"
@@ -330,35 +408,36 @@ export default function PageBuilder() {
       `;
       if (hoverEffect === "underline-and-bg") {
         css += `#${navId} .nav-link:hover{background:${style.hoverBackground} !important;color:${style.hoverTextColor} !important;}`;
-        css += `#${navId} .child-link:hover{background:${style.hoverBackground} !important;color:${style.hoverTextColor} !important;}`;
+        css += `#${navId} .child-link:hover{background:${activeChildBg} !important;color:${style.hoverTextColor} !important;}`;
       }
     } else {
       // default fallback
-      css += `#${navId} .child-link:hover{background:${style.hoverBackground} !important;color:${style.hoverTextColor} !important;}`;
-      css += `#${navId} .child-link:hover{background:${style.hoverBackground} !important;color:${style.hoverTextColor} !important;}`;
+      css += `#${navId} .child-link:hover{background:${activeChildBg} !important;color:${style.hoverTextColor} !important;}`;
+      css += `#${navId} .child-link:hover{background:${activeChildBg} !important;color:${style.hoverTextColor} !important;}`;
     }
 
     // child menu behavior (desktop hover and mobile inline)
     css += `
       /* desktop: child menu is absolutely positioned dropdown; stack items vertically without affecting nav height */
-      #${navId} .nav-item{position:relative}
-      /* ensure child menus are hidden by default (override any utility classes) */
+      #${navId} .nav-item{position:relative;display:flex;flex-direction:column}
       #${navId} .nav-item{overflow:visible}
-      #${navId} .nav-item .child-menu{min-width:160px;overflow:hidden;display:none !important;flex-direction:column;position:absolute;top:calc(100% + 10px);left:0;z-index:120}
+      #${navId} .nav-item .child-menu{min-width:12rem;overflow:hidden;display:none !important;flex-direction:column;position:absolute;top:calc(100% + 6px);left:0;z-index:2000;padding:0.25rem 0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12)}
       #${navId} .nav-item:hover > .child-menu, #${navId} .nav-item[data-child-open="true"] > .child-menu{display:flex !important;flex-direction:column !important;pointer-events:auto}
-      #${navId} .child-menu a, #${navId} .child-link{display:block;padding:.5rem .75rem;color:${style.textColor} !important;background:transparent;text-decoration:none;white-space:nowrap}
-      #${navId} .child-menu{background:${style.backgroundColor} !important;color:${style.textColor} !important;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.08)}
+      #${navId} .child-menu a, #${navId} .child-link{display:block;padding:0.6rem 1rem;color:${style.textColor} !important;background:${style.backgroundColor};text-decoration:none;white-space:nowrap;font-weight:500}
+      #${navId} .child-menu{background:${style.backgroundColor} !important;color:${style.textColor} !important}
       #${navId} .nav-item[data-child-open="true"] .child-menu{display:flex}
-      /* Mobile: child menus are part of flow and full-width */
-      @media (max-width:640px){
-        #${navId} .child-menu{position:static;box-shadow:none;margin-top:0;padding:0;background:transparent;color:inherit;border-radius:0;left:auto;top:auto}
-        #${navId} .child-link{padding-left:1.25rem}
+      /* Mobile: child menus are part of flow, full-width, indented with border-left */
+      @media (max-width:768px){
+        #${navId} .nav-item{width:100%;display:flex;flex-direction:column}
+        #${navId} .child-menu{position:static !important;top:auto !important;left:auto !important;box-shadow:none;padding:0;margin:0;margin-left:1rem;border-radius:0;background:${style.backgroundColor} !important;width:calc(100% - 1rem);border-left:2px solid ${style.hoverBackground}}
+        #${navId} .child-link{padding:0.6rem 1rem;color:${style.textColor} !important;background:${style.backgroundColor} !important;border-radius:0}
+        #${navId} .child-link:hover{background:${activeChildBg} !important}
       }
     `;
 
     // Ensure nav-items render as a column on mobile for THIS nav only; child menus stay hidden until toggled
     css += `
-      @media (max-width:640px){
+      @media (max-width:768px){
         /* top-level nav-items stack vertically only when this nav is opened (avoid global overrides) */
         #${navId}[data-open="true"] .nav-items { display:flex !important; flex-direction:column !important; gap:0 !important; }
         #${navId} .nav-items .nav-item, #${navId} .nav-items a.nav-link { display:block !important; width:100% !important; box-sizing:border-box; }
@@ -376,13 +455,14 @@ export default function PageBuilder() {
     // extend CSS with mobile button visibility and collapsed/expanded rules
     css += `
       .mobile-menu-button{display:none}
-      @media (max-width:640px){
+      @media (max-width:768px){
         .mobile-menu-button{display:inline-block;margin-left:auto}
         #${navId} .nav-items{display:none}
-        #${navId}[data-open="true"] .nav-items{display:flex;flex-direction:column;gap:0.25rem;min-width:160px;box-shadow:0 6px 18px rgba(0,0,0,0.12)}
-        #${navId}[data-open="true"] .nav-items .nav-link{display:block;padding:0.6rem 1rem;text-align:left;background:${style.backgroundColor};color:${style.textColor};width:100%}
+        #${navId}[data-open="true"] .nav-items{display:flex;flex-direction:column;gap:0;min-width:220px;box-shadow:0 8px 24px rgba(0,0,0,0.12)}
+        #${navId}[data-open="true"] .nav-items .nav-link{display:block;padding:0.75rem 1rem;text-align:left;background:${style.backgroundColor};color:${style.textColor};width:100%;border-radius:6px}
         /* ensure child menu items also render full-width and inherit nav colors */
         #${navId}[data-open="true"] .child-menu a{display:block;padding:0.6rem 1rem;background:${style.backgroundColor};color:${style.textColor};width:100%}
+        #${navId}[data-open="true"] .child-menu a:hover{background:${activeChildBg}}
       }
     `;
 
@@ -463,10 +543,12 @@ export default function PageBuilder() {
   .max-w-6xl{max-width:72rem;margin-inline:auto}.max-w-4xl{max-width:56rem;margin-inline:auto}
   
   /* Hero section */
-  .hero{padding:3rem;color:#fff}
-  .hero h1{font-size:2.25rem;font-weight:700;margin-bottom:.5rem}
-  .hero p{font-size:1rem;margin-bottom:1rem}
-  
+   .hero{padding:3rem;color:#fff}
+   .hero h1{font-size:2.25rem;font-weight:700;margin-bottom:.5rem}
+   .hero p{font-size:1rem;margin-bottom:1rem}
+ 
+
+
   /* Cards section */
   .cards{padding:2rem;background:#fff}
   .cards h2{font-size:1.5rem;font-weight:700;margin-bottom:1rem}
@@ -498,7 +580,7 @@ export default function PageBuilder() {
   .carousel-inner{display:flex;overflow:hidden;border-radius:0.5rem;width:100%;position:relative}
   .carousel-display{position:relative;height:280px !important;border-radius:0.5rem;overflow:hidden;display:flex;align-items:center;justify-content:center}
   .carousel-item{width:100% !important;height:100% !important;object-fit:cover;display:block}
-  .carousel button{width:12px !important;height:12px !important;border-radius:50%;border:none;cursor:pointer;transition:all 0.3s;padding:0;min-width:12px;min-height:12px}
+  .carousel .dot-nav button{width:12px !important;height:12px !important;border-radius:50%;border:none;cursor:pointer;transition:all 0.3s;padding:0;min-width:12px;min-height:12px}
   .carousel .grid{display:flex;gap:1rem;transition:transform 0.5s ease-in-out;width:100%}
   .carousel .grid>div{flex:0 0 calc(33.333% - 0.67rem);border-radius:.5rem;overflow:hidden;transition:all 0.3s ease;cursor:pointer;background:#fff;min-width:280px}
   .carousel .grid>div.style-minimal{border:1px solid #f0f0f0;background:#fafafa}
@@ -1375,7 +1457,7 @@ export default function PageBuilder() {
 
         const primaryBtnHtml = `<a href="${
           hc.primaryCtaUrl || "#"
-        }" style="${getPrimaryButtonStyle()}"${
+        }" class="hero-btn hero-btn-primary" style="${getPrimaryButtonStyle()}"${
           pbEnableAnimation
             ? ` onmouseover="${getPrimaryHoverIn()}" onmouseout="${getPrimaryHoverOut()}"`
             : ""
@@ -1383,22 +1465,219 @@ export default function PageBuilder() {
         const secondaryBtnHtml = hc.secondaryCta
           ? `<a href="${
               hc.secondaryCtaUrl || "#"
-            }" style="${getSecondaryButtonStyle()}"${
+            }" class="hero-btn hero-btn-secondary" style="${getSecondaryButtonStyle()}"${
               sbEnableAnimation
                 ? ` onmouseover="${getSecondaryHoverIn()}" onmouseout="${getSecondaryHoverOut()}"`
                 : ""
             }>${hc.secondaryCta}</a>`
           : "";
 
+        // Responsive CSS for hero sections - works across all variants
+        const heroResponsiveCss = `
+          <style>
+            /* Hero Section Responsive Styles */
+            .hero-section {
+              box-sizing: border-box;
+            }
+            .hero-section * {
+              box-sizing: border-box;
+            }
+            
+            /* Desktop: Side-by-side layout for variants 2 & 3 */
+            @media (min-width: 769px) {
+              .hero-section .hero-grid {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                gap: 3rem !important;
+              }
+              .hero-section .hero-grid.image-left {
+                flex-direction: row !important;
+              }
+              .hero-section .hero-grid.image-right {
+                flex-direction: row-reverse !important;
+              }
+              .hero-section .hero-img-col,
+              .hero-section .hero-text-col {
+                flex: 1 !important;
+                min-width: 0 !important;
+              }
+              .hero-section .hero-img-col {
+                max-width: 50% !important;
+              }
+            }
+            
+            /* Tablet: Adjust spacing and font sizes */
+            @media (max-width: 1024px) and (min-width: 769px) {
+              .hero-section {
+                padding: 3rem 1.5rem !important;
+              }
+              .hero-section h1 {
+                font-size: 2rem !important;
+              }
+              .hero-section .hero-grid {
+                gap: 2rem !important;
+              }
+            }
+            
+            /* Mobile: Stack vertically */
+            @media (max-width: 768px) {
+              .hero-section {
+                padding: 2.5rem 1.25rem !important;
+              }
+              .hero-section .hero-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 1.5rem !important;
+              }
+              .hero-section .hero-grid.image-left,
+              .hero-section .hero-grid.image-right {
+                flex-direction: column !important;
+              }
+              .hero-section .hero-img-col {
+                width: 100% !important;
+                max-width: 100% !important;
+                order: 1 !important;
+              }
+              .hero-section .hero-text-col {
+                width: 100% !important;
+                order: 2 !important;
+                align-items: center !important;
+                text-align: center !important;
+              }
+              .hero-section h1 {
+                font-size: 1.75rem !important;
+                margin-bottom: 0.75rem !important;
+              }
+              .hero-section p {
+                font-size: 1rem !important;
+                margin-bottom: 1.25rem !important;
+              }
+              .hero-section .hero-btn-row {
+                justify-content: center !important;
+                flex-direction: column !important;
+                gap: 0.75rem !important;
+                width: 100% !important;
+              }
+              .hero-section .hero-btn {
+                width: 100% !important;
+                text-align: center !important;
+                padding: 0.75rem 1.5rem !important;
+              }
+            }
+            
+            /* Small Mobile: Further adjustments */
+            @media (max-width: 480px) {
+              .hero-section {
+                padding: 2rem 1rem !important;
+              }
+              .hero-section h1 {
+                font-size: 1.5rem !important;
+              }
+              .hero-section p {
+                font-size: 0.9375rem !important;
+              }
+              .hero-section .hero-btn {
+                font-size: 0.9375rem !important;
+                padding: 0.625rem 1.25rem !important;
+              }
+            }
+            
+            /* Variant 4 (Full Background) Responsive */
+            .hero-v4 {
+              min-height: 500px;
+            }
+            @media (max-width: 768px) {
+              .hero-v4 {
+                min-height: 400px !important;
+                padding: 2rem 1rem !important;
+              }
+              .hero-v4 h1 {
+                font-size: 1.75rem !important;
+              }
+              .hero-v4 p {
+                font-size: 1rem !important;
+                margin-bottom: 1.5rem !important;
+              }
+              .hero-v4 .hero-btn-row {
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 0.75rem !important;
+                width: 100% !important;
+              }
+              .hero-v4 .hero-btn {
+                width: 100% !important;
+                max-width: 300px !important;
+                text-align: center !important;
+                display: block !important;
+                margin: 0 auto !important;
+              }
+            }
+            @media (max-width: 480px) {
+              .hero-v4 {
+                min-height: 350px !important;
+              }
+              .hero-v4 h1 {
+                font-size: 1.5rem !important;
+              }
+            }
+            
+            /* Variant 1 (Centered) Responsive */
+            .hero-v1 .hero-content {
+              text-align: center;
+            }
+            .hero-v1 .hero-btn-row {
+              justify-content: center;
+            }
+            @media (max-width: 768px) {
+              .hero-v1 {
+                padding: 2.5rem 1.25rem !important;
+              }
+              .hero-v1 h1 {
+                font-size: 1.75rem !important;
+              }
+              .hero-v1 p {
+                font-size: 1rem !important;
+              }
+              .hero-v1 .hero-btn-row {
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 0.75rem !important;
+                width: 100% !important;
+              }
+              .hero-v1 .hero-btn {
+                width: 100% !important;
+                max-width: 300px !important;
+                text-align: center !important;
+                display: block !important;
+                margin: 0 auto !important;
+              }
+            }
+            @media (max-width: 480px) {
+              .hero-v1 {
+                padding: 2rem 1rem !important;
+              }
+              .hero-v1 h1 {
+                font-size: 1.5rem !important;
+              }
+            }
+          </style>
+        `;
+
         // Variant 2 & 3: Image + text layout
+        // Variant 2: Image LEFT, Content RIGHT
+        // Variant 3: Image RIGHT, Content LEFT
         if (variant === 2 || variant === 3) {
           const imageLeft = variant === 2;
           const bgColor = hc.backgroundColor || "#ffffff";
           const textColor = hc.textColor || "#111827";
+          const gridClass = imageLeft ? "image-left" : "image-right";
           const imgHtml =
             hc.sideImage && String(hc.sideImage).length > 0
-              ? `<img src="${hc.sideImage}" alt="side" style="width:100%;height:100%;object-fit:cover;border-radius:0.75rem;"/>`
-              : `<div style="width:100%;height:320px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;border-radius:0.75rem;color:#6b7280;">No image</div>`;
+              ? `<img src="${hc.sideImage}" alt="Hero image" style="width:100%;height:100%;object-fit:cover;border-radius:0.75rem;aspect-ratio:4/3;"/>`
+              : `<div style="width:100%;height:320px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;border-radius:0.75rem;color:#6b7280;aspect-ratio:4/3;">No image</div>`;
           const textContent = `<div class="hero-text-col" style="display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;"><h1 style="font-size:2.5rem;font-weight:700;margin-bottom:1rem;line-height:1.2;color:${textColor};">${
             hc.headline
           }</h1>${
@@ -1406,11 +1685,8 @@ export default function PageBuilder() {
               ? `<p style="font-size:1.125rem;margin-bottom:1.5rem;line-height:1.6;color:${textColor};opacity:0.8;">${hc.subheading}</p>`
               : ""
           }<div class="hero-btn-row" style="display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:flex-start;">${primaryBtnHtml}${secondaryBtnHtml}</div></div>`;
-          return `<section class="hero hero-section" style="padding:4rem 2rem;background-color:${bgColor};"><div class="hero-grid" style="max-width:72rem;margin:0 auto;display:flex;flex-direction:column;gap:1rem;">${
-            imageLeft
-              ? `<div class="hero-img" style="aspect-ratio:4/3;">${imgHtml}</div><div>${textContent}</div>`
-              : `<div class="hero-img" style="aspect-ratio:4/3;">${imgHtml}</div><div>${textContent}</div>`
-          }</div></section>`;
+
+          return `${heroResponsiveCss}<section class="hero hero-section" style="padding:4rem 2rem;background-color:${bgColor};"><div class="hero-grid ${gridClass}" style="max-width:72rem;margin:0 auto;display:flex;flex-direction:row;gap:3rem;align-items:center;"><div class="hero-img-col" style="flex:1;min-width:0;">${imgHtml}</div><div class="hero-text-col-wrapper" style="flex:1;min-width:0;">${textContent}</div></div></section>`;
         }
 
         // Variant 4: Full background image with overlay
@@ -1441,20 +1717,20 @@ export default function PageBuilder() {
               : "";
 
           return (
-            `<section class="hero" style="${bgImageStyle}min-height:500px;display:flex;align-items:center;justify-content:center;"><div style="width:100%;max-width:64rem;margin:0 auto;padding:3rem 2rem;text-align:center;"><h1 style="font-size:3rem;font-weight:800;margin-bottom:1rem;line-height:1.2;color:${textColor};text-shadow:0 2px 8px rgba(0,0,0,0.3);">${
+            `${heroResponsiveCss}<section class="hero hero-section hero-v4" style="${bgImageStyle}min-height:500px;display:flex;align-items:center;justify-content:center;"><div style="width:100%;max-width:64rem;margin:0 auto;padding:3rem 2rem;text-align:center;"><h1 style="font-size:3rem;font-weight:800;margin-bottom:1rem;line-height:1.2;color:${textColor};text-shadow:0 2px 8px rgba(0,0,0,0.3);">${
               hc.headline
             }</h1><p style="font-size:1.25rem;margin-bottom:2rem;line-height:1.6;color:${textColor};opacity:0.95;text-shadow:0 1px 4px rgba(0,0,0,0.2);">${
               hc.subheading || ""
-            }</p><div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">` +
+            }</p><div class="hero-btn-row" style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">` +
             `<a href="${
               hc.primaryCtaUrl || "#"
-            }" style="${v4PrimaryStyle}" onmouseover="this.style.background='${pbHoverBgColor}';this.style.boxShadow='${pbShadowHover}';${v4PrimaryTransformIn}" onmouseout="this.style.background='${pbBgColor}';this.style.boxShadow='${pbShadowValue}';${v4PrimaryTransformOut}">${
+            }" class="hero-btn hero-btn-primary" style="${v4PrimaryStyle}" onmouseover="this.style.background='${pbHoverBgColor}';this.style.boxShadow='${pbShadowHover}';${v4PrimaryTransformIn}" onmouseout="this.style.background='${pbBgColor}';this.style.boxShadow='${pbShadowValue}';${v4PrimaryTransformOut}">${
               hc.primaryCta
             }</a>` +
             (hc.secondaryCta
               ? `<a href="${
                   hc.secondaryCtaUrl || "#"
-                }" style="${v4SecondaryStyle}" onmouseover="this.style.background='${textColor}';this.style.color='${
+                }" class="hero-btn hero-btn-secondary" style="${v4SecondaryStyle}" onmouseover="this.style.background='${textColor}';this.style.color='${
                   bgColor.includes("rgba") ? "#000" : bgColor
                 }';${v4SecondaryTransformIn}" onmouseout="this.style.background='transparent';this.style.color='${textColor}';${v4SecondaryTransformOut}">${
                   hc.secondaryCta
@@ -1470,11 +1746,11 @@ export default function PageBuilder() {
         const bgStyle = hc.backgroundImage
           ? `background-image:url('${hc.backgroundImage}');background-size:cover;background-position:center;background-color:${bgColor};`
           : `background-color:${bgColor};`;
-        return `<section class="hero" style="${bgStyle}padding:4rem 2rem;"><div style="max-width:72rem;margin:0 auto;text-align:center;"><h1 style="font-size:2.5rem;font-weight:700;margin-bottom:0.75rem;line-height:1.2;color:${textColor};">${
+        return `${heroResponsiveCss}<section class="hero hero-section hero-v1" style="${bgStyle}padding:4rem 2rem;"><div class="hero-content" style="max-width:72rem;margin:0 auto;text-align:center;"><h1 style="font-size:2.5rem;font-weight:700;margin-bottom:0.75rem;line-height:1.2;color:${textColor};">${
           hc.headline
         }</h1><p style="font-size:1.125rem;margin-bottom:1.5rem;line-height:1.6;color:${textColor};opacity:0.8;">${
           hc.subheading || ""
-        }</p><div style="display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">${primaryBtnHtml}${secondaryBtnHtml}</div></div></section>`;
+        }</p><div class="hero-btn-row" style="display:flex;justify-content:center;gap:0.75rem;flex-wrap:wrap;">${primaryBtnHtml}${secondaryBtnHtml}</div></div></section>`;
       }
       case "cards": {
         const f = getFeaturesContent(s);
@@ -1701,6 +1977,107 @@ export default function PageBuilder() {
         const autoScroll = s.props?.autoScroll || false;
         const carouselId = `carousel-${s.id}`;
 
+        // Responsive CSS for carousel sections
+        const carouselResponsiveCss = `
+          <style>
+            /* Carousel Section Responsive Styles */
+            .carousel-section {
+              box-sizing: border-box;
+            }
+            .carousel-section * {
+              box-sizing: border-box;
+            }
+            
+            /* Variant 3 Responsive Styles */
+            .carousel-v3 .carousel-display {
+              height: 280px;
+              position: relative;
+            }
+            .carousel-v3 .carousel-prev,
+            .carousel-v3 .carousel-next {
+              position: absolute;
+              top: 50%;
+              transform: translateY(-50%);
+              z-index: 10;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              line-height: 1;
+              padding: 0;
+              text-align: center;
+            }
+            .carousel-v3 .carousel-prev {
+              left: 0.5rem;
+            }
+            .carousel-v3 .carousel-next {
+              right: 0.5rem;
+            }
+            .carousel-v3 .dot-nav {
+              display: flex;
+              gap: 0.25rem;
+              justify-content: center;
+              margin-bottom: 0.75rem;
+            }
+            .carousel-v3 .filter-buttons {
+              display: flex;
+              gap: 0.5rem;
+              justify-content: center;
+              flex-wrap: wrap;
+            }
+            .carousel-v3 .filter-btn {
+              padding: 0.5rem 1rem;
+              border: 1px solid #667eea;
+              border-radius: 0.375rem;
+              cursor: pointer;
+              transition: all 0.3s;
+              font-weight: 500;
+              white-space: nowrap;
+            }
+            
+            @media (max-width: 768px) {
+              .carousel-v3 .carousel-display {
+                height: 220px !important;
+              }
+              .carousel-v3 .carousel-prev,
+              .carousel-v3 .carousel-next {
+                width: 2rem !important;
+                height: 2rem !important;
+                font-size: 1.25rem !important;
+              }
+              .carousel-v3 .dot-nav {
+                margin-bottom: 0.5rem !important;
+              }
+              .carousel-v3 .dot-nav button {
+                width: 0.5rem !important;
+                height: 0.5rem !important;
+              }
+              .carousel-v3 .filter-buttons {
+                gap: 0.375rem !important;
+              }
+              .carousel-v3 .filter-btn {
+                padding: 0.375rem 0.75rem !important;
+                font-size: 0.875rem !important;
+              }
+            }
+            
+            @media (max-width: 480px) {
+              .carousel-v3 .carousel-display {
+                height: 180px !important;
+              }
+              .carousel-v3 .carousel-prev,
+              .carousel-v3 .carousel-next {
+                width: 1.75rem !important;
+                height: 1.75rem !important;
+                font-size: 1rem !important;
+              }
+              .carousel-v3 .filter-btn {
+                padding: 0.25rem 0.5rem !important;
+                font-size: 0.75rem !important;
+              }
+            }
+          </style>
+        `;
+
         // Variant 2: Show ONE item at a time with dot navigation
         if (carouselVariant === 2) {
           return `<section class="carousel p-8"><div class="max-w-6xl mx-auto">
@@ -1780,10 +2157,19 @@ export default function PageBuilder() {
 
         // Variant 3: Typed Image Carousel with type filter, navigation, and auto-scroll
         if (carouselVariant === 3) {
-          const types = Array.from(
+          // Get unique types, filtering out 'default' if it's the only one or if there are other types
+          const allTypes = Array.from(
             new Set(items.map((it: any) => it.type || "default"))
           );
-          return `<section class="carousel p-8"><div class="max-w-6xl mx-auto">
+          // Only show filter buttons if there are meaningful categories (more than just 'default')
+          const types = allTypes.filter(
+            (t) =>
+              t !== "default" ||
+              (allTypes.length === 1 && allTypes[0] === "default")
+          );
+          const showFilters =
+            types.length > 1 || (types.length === 1 && types[0] !== "default");
+          return `${carouselResponsiveCss}<section class="carousel carousel-section carousel-v3 p-8"><div class="max-w-6xl mx-auto">
             <h2 class="text-2xl font-bold mb-4">${s.title || "Gallery"}</h2>
             <div id="${carouselId}" data-current="0">
               <div class="carousel-display" style="position:relative;margin-bottom:1rem;height:280px;border-radius:0.5rem;overflow:hidden">
@@ -1795,14 +2181,14 @@ export default function PageBuilder() {
                     "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22280%22/%3E%3C/svg%3E"
                   }" alt="" class="carousel-item" style="display:${
                       idx === 0 ? "block" : "none"
-                    };width:100%;height:100%;object-fit:cover" data-index="${idx}" data-type="${
+                    };width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0" data-index="${idx}" data-type="${
                       it.type || "default"
                     }"/>
                 `
                   )
                   .join("")}
                 <!-- Navigation arrows -->
-                <button class="carousel-prev" style="position:absolute;left:0.5rem;top:50%;transform:translateY(-50%);width:2.5rem;height:2.5rem;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:1.5rem;display:flex;align-items:center;justify-content:center" onclick="
+                <button class="carousel-prev" style="position:absolute;left:0.5rem;top:50%;transform:translateY(-50%);width:2.5rem;height:2.5rem;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:1.25rem;display:flex;align-items:center;justify-content:center;z-index:5;line-height:1;padding:0;padding-bottom:2px" onclick="
                   const carousel = document.getElementById('${carouselId}');
                   const items = carousel.querySelectorAll('.carousel-item');
                   let current = parseInt(carousel.dataset.current || 0);
@@ -1812,7 +2198,7 @@ export default function PageBuilder() {
                   carousel.dataset.current = current;
                   carousel.querySelectorAll('.dot-nav button').forEach((b,i) => b.style.background = i === current ? '#667eea' : '#ccc');
                 ">‹</button>
-                <button class="carousel-next" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);width:2.5rem;height:2.5rem;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:1.5rem;display:flex;align-items:center;justify-content:center" onclick="
+                <button class="carousel-next" style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);width:2.5rem;height:2.5rem;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:1.25rem;display:flex;align-items:center;justify-content:center;z-index:5;line-height:1;padding:0;padding-bottom:2px" onclick="
                   const carousel = document.getElementById('${carouselId}');
                   const items = carousel.querySelectorAll('.carousel-item');
                   let current = parseInt(carousel.dataset.current || 0);
@@ -1842,12 +2228,14 @@ export default function PageBuilder() {
                   )
                   .join("")}
               </div>
-              <!-- Category filter buttons -->
-              <div style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap">
+              <!-- Category filter buttons (only shown if there are meaningful categories) -->
+              ${
+                showFilters
+                  ? `<div class="filter-buttons" style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap">
                 ${types
                   .map(
                     (type: any) => `
-                  <button data-type="${type}" style="padding:0.5rem 1rem;border:1px solid #667eea;background:${
+                  <button class="filter-btn" data-type="${type}" style="padding:0.5rem 1rem;border:1px solid #667eea;background:${
                       type === types[0] ? "#667eea" : "#fff"
                     };color:${
                       type === types[0] ? "#fff" : "#667eea"
@@ -1861,7 +2249,7 @@ export default function PageBuilder() {
                     allItems[idx].style.display = 'block';
                     carousel.dataset.current = idx;
                     carousel.querySelectorAll('.dot-nav button').forEach((b,i) => b.style.background = i === idx ? '#667eea' : '#ccc');
-                    carousel.querySelectorAll('[data-type]').forEach(b => {
+                    carousel.querySelectorAll('.filter-btn').forEach(b => {
                       b.style.background = b.getAttribute('data-type') === '${type}' ? '#667eea' : '#fff';
                       b.style.color = b.getAttribute('data-type') === '${type}' ? '#fff' : '#667eea';
                     });
@@ -1869,7 +2257,9 @@ export default function PageBuilder() {
                 `
                   )
                   .join("")}
-              </div>
+              </div>`
+                  : ""
+              }
             </div>
           </div></section>
           ${
@@ -1894,92 +2284,103 @@ export default function PageBuilder() {
         }
 
         if (carouselVariant === 4) {
-          const totalPages = Math.ceil(items.length / 3);
-          return `<section class="carousel p-8"><div class="max-w-6xl mx-auto">
-            <h2 class="text-2xl font-bold mb-4">${
-              s.title || "Featured Items"
-            }</h2>
-            <div id="${carouselId}" data-page="0" data-total="${totalPages}" style="position:relative;padding:0 3rem">
-              <!-- Navigation arrows -->
-              ${
-                totalPages > 1
-                  ? `
-              <button class="carousel-prev" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:2.5rem;height:2.5rem;background:linear-gradient(135deg,#667eea 0%,#5a67d8 100%);color:#fff;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 4px 12px rgba(102,126,234,0.4);transition:all 0.3s ease" onmouseover="this.style.transform='translateY(-50%) scale(1.1)';this.style.boxShadow='0 6px 16px rgba(102,126,234,0.5)'" onmouseout="this.style.transform='translateY(-50%)';this.style.boxShadow='0 4px 12px rgba(102,126,234,0.4)'" onclick="
-                const carousel = document.getElementById('${carouselId}');
-                const track = carousel.querySelector('.carousel-track');
-                let current = parseInt(carousel.dataset.page || 0);
-                current = (current - 1 + ${totalPages}) % ${totalPages};
-                track.style.transform = 'translateX(-' + (current * 100) + '%)';
-                carousel.dataset.page = current;
-              "><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2.5'><path stroke-linecap='round' stroke-linejoin='round' d='M15 19l-7-7 7-7'/></svg></button>
-              <button class="carousel-next" style="position:absolute;right:0;top:50%;transform:translateY(-50%);width:2.5rem;height:2.5rem;background:linear-gradient(135deg,#667eea 0%,#5a67d8 100%);color:#fff;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 4px 12px rgba(102,126,234,0.4);transition:all 0.3s ease" onmouseover="this.style.transform='translateY(-50%) scale(1.1)';this.style.boxShadow='0 6px 16px rgba(102,126,234,0.5)'" onmouseout="this.style.transform='translateY(-50%)';this.style.boxShadow='0 4px 12px rgba(102,126,234,0.4)'" onclick="
-                const carousel = document.getElementById('${carouselId}');
-                const track = carousel.querySelector('.carousel-track');
-                let current = parseInt(carousel.dataset.page || 0);
-                current = (current + 1) % ${totalPages};
-                track.style.transform = 'translateX(-' + (current * 100) + '%)';
-                carousel.dataset.page = current;
-              "><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2.5'><path stroke-linecap='round' stroke-linejoin='round' d='M9 5l7 7-7 7'/></svg></button>
-              `
-                  : ""
-              }
-              
-              <!-- Sliding container -->
-              <div style="overflow:hidden">
-                <div class="carousel-track" style="display:flex;transition:transform 0.5s ease-in-out">
-              ${Array.from({ length: totalPages })
-                .map((_, pageIdx) => {
-                  const pageItems = items.slice(pageIdx * 3, (pageIdx + 1) * 3);
-                  return `
-                <div class="carousel-page" style="flex-shrink:0;width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem">
-                  ${pageItems
-                    .map(
-                      (it: any) => `
-                    <div style="border:1px solid #e5e7eb;border-radius:0.5rem;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.04);transition:all 0.3s;cursor:pointer" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='0 1px 2px rgba(0,0,0,0.04)';this.style.transform='translateY(0)'">
-                      <img src="${
-                        it.image ||
-                        "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3C/svg%3E"
-                      }" alt="${
-                        it.title || ""
-                      }" style="width:100%;height:200px;object-fit:cover;display:block"/>
-                      <div style="padding:1rem">
-                        <h4 style="font-weight:600;margin:0;margin-bottom:0.5rem">${
-                          it.title || "Untitled"
-                        }</h4>
-                        <p style="font-size:0.875rem;color:#4b5563;margin:0">${
-                          it.description || ""
-                        }</p>
+          const totalItems = items.length;
+
+          return `<section class="carousel carousel-section" style="padding:2rem 0;background:#fff;">
+            <div style="max-width:72rem;margin:0 auto;padding:0 1rem;">
+              <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem;color:#111827;">${
+                s.title || "Featured Items"
+              }</h2>
+              <div id="${carouselId}" data-index="0" style="position:relative;">
+                <!-- Cards Track -->
+                <div style="overflow:hidden;">
+                  <div id="${carouselId}-track" style="display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;padding:8px 0;">
+                    ${items
+                      .map(
+                        (it: any) => `
+                      <div style="flex:0 0 300px;min-width:300px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);background:#fff;scroll-snap-align:start;transition:transform 0.2s ease,box-shadow 0.2s ease;">
+                        <img src="${
+                          it.image ||
+                          "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22300%22 height=%22200%22/%3E%3C/svg%3E"
+                        }" alt="${
+                          it.title || ""
+                        }" style="width:100%;height:200px;object-fit:cover;display:block;"/>
+                        <div style="padding:16px;">
+                          <h4 style="font-weight:600;margin:0 0 8px 0;font-size:1rem;color:#111827;">${
+                            it.title || "Untitled"
+                          }</h4>
+                          <p style="font-size:0.875rem;color:#6b7280;margin:0;line-height:1.5;">${
+                            it.description || ""
+                          }</p>
+                        </div>
                       </div>
-                    </div>
-                  `
-                    )
-                    .join("")}
+                    `
+                      )
+                      .join("")}
+                  </div>
                 </div>
-              `;
-                })
-                .join("")}
-                </div>
+                
+                <!-- Left Arrow - No circle, just arrow on image center -->
+                <button id="${carouselId}-prev" onclick="
+                  var carousel = document.getElementById('${carouselId}');
+                  var track = document.getElementById('${carouselId}-track');
+                  var cards = track.children;
+                  var idx = parseInt(carousel.dataset.index || 0);
+                  idx = (idx - 1 + ${totalItems}) % ${totalItems};
+                  carousel.dataset.index = idx;
+                  var cardWidth = cards[0].offsetWidth + 16;
+                  track.scrollTo({ left: idx * cardWidth, behavior: 'smooth' });
+                " style="position:absolute;left:20px;top:108px;transform:translateY(-50%);background:none;border:none;cursor:pointer;z-index:20;padding:8px;transition:all 0.2s ease;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                
+                <!-- Right Arrow - No circle, just arrow on image center -->
+                <button id="${carouselId}-next" onclick="
+                  var carousel = document.getElementById('${carouselId}');
+                  var track = document.getElementById('${carouselId}-track');
+                  var cards = track.children;
+                  var idx = parseInt(carousel.dataset.index || 0);
+                  idx = (idx + 1) % ${totalItems};
+                  carousel.dataset.index = idx;
+                  var cardWidth = cards[0].offsetWidth + 16;
+                  track.scrollTo({ left: idx * cardWidth, behavior: 'smooth' });
+                " style="position:absolute;right:20px;top:108px;transform:translateY(-50%);background:none;border:none;cursor:pointer;z-index:20;padding:8px;transition:all 0.2s ease;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
               </div>
             </div>
-          </div></section>
-          ${
-            autoScroll && totalPages > 1
-              ? `<script>
-            (function() {
-              const carousel = document.getElementById('${carouselId}');
-              if (!carousel) return;
-              const track = carousel.querySelector('.carousel-track');
-              const totalPages = ${totalPages};
-              setInterval(() => {
-                let current = parseInt(carousel.dataset.page || 0);
-                current = (current + 1) % totalPages;
-                track.style.transform = 'translateX(-' + (current * 100) + '%)';
-                carousel.dataset.page = current;
-              }, 5000);
-            })();
-          </script>`
-              : ""
-          }`;
+            <style>
+              #${carouselId}-track::-webkit-scrollbar { display: none; }
+              #${carouselId}-prev:hover svg, #${carouselId}-next:hover svg { 
+                transform: scale(1.2);
+                filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6));
+              }
+              #${carouselId}-track > div:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+              }
+            </style>
+            ${
+              autoScroll
+                ? `<script>
+              (function() {
+                var carousel = document.getElementById('${carouselId}');
+                var track = document.getElementById('${carouselId}-track');
+                if (!carousel || !track) return;
+                var cards = track.children;
+                var total = ${totalItems};
+                setInterval(function() {
+                  var idx = parseInt(carousel.dataset.index || 0);
+                  idx = (idx + 1) % total;
+                  carousel.dataset.index = idx;
+                  var cardWidth = cards[0].offsetWidth + 16;
+                  track.scrollTo({ left: idx * cardWidth, behavior: 'smooth' });
+                }, 4000);
+              })();
+            </script>`
+                : ""
+            }
+          </section>`;
         }
 
         // Variant 1: Simple Image Carousel - show ONE item with dot navigation
@@ -2181,8 +2582,8 @@ export default function PageBuilder() {
             : ""
         }`;
 
-        // Content HTML for left/right layouts (not centered)
-        const contentHtml = `<div class="content flex flex-col justify-center">${contentInner}</div>`;
+        // Content HTML for left/right layouts (centered)
+        const contentHtml = `<div class="content flex flex-col justify-center items-center">${contentInner}</div>`;
 
         // Content HTML for top/bottom layouts (centered)
         const contentHtmlCentered = `<div class="content flex flex-col justify-center items-center text-center">${contentInner}</div>`;
@@ -2190,10 +2591,10 @@ export default function PageBuilder() {
         let layoutHtml = "";
         switch (b.layout) {
           case "text-left":
-            layoutHtml = `<div class="max-w-6xl mx-auto flex flex-col lg:flex-row gap-12 items-center"><div class="w-full flex flex-col justify-center" style="flex:0 0 55%">${contentHtml}</div><div class="img w-full flex justify-center" style="flex:0 0 45%">${imageHtml}</div></div>`;
+            layoutHtml = `<div class="max-w-6xl mx-auto flex flex-col lg:flex-row gap-12 items-center"><div class="w-full flex flex-col justify-center items-center" style="flex:0 0 55%;min-width:0">${contentHtml}</div><div class="img w-full flex justify-center" style="flex:0 0 45%;min-width:0">${imageHtml}</div></div>`;
             break;
           case "text-right":
-            layoutHtml = `<div class="max-w-6xl mx-auto flex flex-col lg:flex-row gap-12 items-center"><div class="img w-full flex justify-center" style="flex:0 0 45%">${imageHtml}</div><div class="w-full flex flex-col justify-center" style="flex:0 0 55%;margin-left:1.5rem">${contentHtml}</div></div>`;
+            layoutHtml = `<div class="max-w-6xl mx-auto flex flex-col lg:flex-row-reverse gap-12 items-center"><div class="w-full flex flex-col justify-center items-center" style="flex:0 0 55%;min-width:0">${contentHtml}</div><div class="img w-full flex justify-center" style="flex:0 0 45%;min-width:0">${imageHtml}</div></div>`;
             break;
           case "text-top":
             layoutHtml = `<div class="max-w-6xl mx-auto"><div class="w-full text-center mb-6" style="margin-bottom:1.5rem">${contentHtmlCentered}</div><div class="img w-full flex justify-center">${imageHtml}</div></div>`;
@@ -2212,7 +2613,14 @@ export default function PageBuilder() {
           b.styles?.backgroundColor || "#ffffff"
         };border-radius:${b.styles?.borderRadius || "0.5rem"};padding:${
           b.styles?.padding || "2rem"
-        }">${layoutHtml}</section>`;
+        }"><style>
+          .imagetextblock h2 { font-size: clamp(1.25rem, 5vw, 2rem); line-height: 1.3; }
+          .imagetextblock h3 { font-size: clamp(1rem, 4vw, 1.125rem); line-height: 1.4; }
+          .imagetextblock p { font-size: clamp(0.875rem, 2.5vw, 1rem); line-height: 1.6; }
+          @media (max-width: 1024px) {
+            .imagetextblock .img { margin-top: 1.5rem; }
+          }
+        </style>${layoutHtml}</section>`;
       }
       case "testimonials": {
         const testimonialStyle = s.props?.style || "shadow";
@@ -4302,7 +4710,7 @@ ${htmlParts.join("\n")}
                                       (t, idx) => (
                                         <div
                                           key={idx}
-                                          className="flex-shrink-0 w-72 bg-white border rounded-xl p-4 shadow-sm relative"
+                                          className="shrink-0 w-72 bg-white border rounded-xl p-4 shadow-sm relative"
                                         >
                                           <div className="absolute top-3 right-3 w-8 h-8 opacity-10">
                                             <svg
@@ -4323,7 +4731,7 @@ ${htmlParts.join("\n")}
                                                 className="w-10 h-10 rounded-full object-cover border-2 border-blue-500"
                                               />
                                             ) : (
-                                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                                              <div className="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
                                                 {(t.author || "A")
                                                   .charAt(0)
                                                   .toUpperCase()}

@@ -72,6 +72,7 @@ export default function SiteSettings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fontFamily, setFontFamily] = useState("Roboto");
 
   useEffect(() => {
     (async () => {
@@ -121,6 +122,8 @@ export default function SiteSettings() {
             ];
           }
           setFooterConfig(mergedFooter as FooterConfig);
+          // Load font family
+          setFontFamily(res.data.fontFamily || "Roboto");
         }
       } catch (err) {
         console.error(err);
@@ -157,6 +160,7 @@ export default function SiteSettings() {
       const res = await api.updateSiteConfig({
         navConfig,
         footerConfig: sanitizedFooter,
+        fontFamily,
       });
       console.debug(
         "SiteSettings: updateSiteConfig response:",
@@ -208,6 +212,28 @@ export default function SiteSettings() {
           {success}
         </div>
       )}
+
+      <div className="mb-6 bg-white p-6 rounded shadow">
+        <h2 className="font-semibold mb-3">Font Settings</h2>
+        <div>
+          <label className="block text-sm font-semibold mb-2">
+            Site Font Family
+          </label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200"
+            value={fontFamily}
+            onChange={(e) => setFontFamily(e.target.value)}
+          >
+            <option value="Roboto">Roboto</option>
+            <option value="Open Sans">Open Sans</option>
+            <option value="Rubik">Rubik</option>
+            <option value="DM Sans">DM Sans</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-2">
+            Select the font family to be used throughout the entire site
+          </p>
+        </div>
+      </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded shadow">

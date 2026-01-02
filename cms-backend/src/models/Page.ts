@@ -13,6 +13,15 @@ export interface IPage extends Document {
   status: "draft" | "published";
   layout: Block[];
   content?: string; // Store the full HTML content
+  customCss?: string; // Custom CSS added by user
+  customHtml?: string; // Custom HTML added by user
+  customHtmlPosition?:
+    | "start"
+    | "after-nav"
+    | "before-footer"
+    | "end"
+    | "after-selector"; // Where to inject custom HTML
+  customHtmlSelector?: string; // CSS selector for custom position
   seo?: {
     metaTitle?: string;
     metaDescription?: string;
@@ -41,6 +50,14 @@ const PageSchema = new Schema<IPage>(
     status: { type: String, enum: ["draft", "published"], default: "draft" },
     layout: { type: [BlockSchema], default: [] },
     content: { type: String }, // Store the full HTML content
+    customCss: { type: String, default: "" }, // Custom CSS added by user
+    customHtml: { type: String, default: "" }, // Custom HTML added by user
+    customHtmlPosition: {
+      type: String,
+      enum: ["start", "after-nav", "before-footer", "end", "after-selector"],
+      default: "start",
+    }, // Where to inject custom HTML
+    customHtmlSelector: { type: String, default: "" }, // CSS selector for custom position
     seo: Schema.Types.Mixed,
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     updatedBy: { type: Schema.Types.ObjectId, ref: "User" },

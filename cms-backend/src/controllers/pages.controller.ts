@@ -113,6 +113,12 @@ export async function adminUpdatePageHandler(req: Request, res: Response) {
       content: z.string().optional(),
       layout: z.array(z.any()).optional(),
       seo: z.any().optional(),
+      customCss: z.string().optional(),
+      customHtml: z.string().optional(),
+      customHtmlPosition: z
+        .enum(["start", "after-nav", "before-footer", "end", "after-selector"])
+        .optional(),
+      customHtmlSelector: z.string().optional(),
     });
     const parsed = schema.parse(req.body);
 
@@ -123,6 +129,18 @@ export async function adminUpdatePageHandler(req: Request, res: Response) {
       ...(parsed.path !== undefined ? { path: parsed.path } : {}),
       ...(parsed.title !== undefined ? { title: parsed.title } : {}),
       ...(parsed.content !== undefined ? { content: parsed.content } : {}),
+      ...(parsed.customCss !== undefined
+        ? { customCss: parsed.customCss }
+        : {}),
+      ...(parsed.customHtml !== undefined
+        ? { customHtml: parsed.customHtml }
+        : {}),
+      ...(parsed.customHtmlPosition !== undefined
+        ? { customHtmlPosition: parsed.customHtmlPosition }
+        : {}),
+      ...(parsed.customHtmlSelector !== undefined
+        ? { customHtmlSelector: parsed.customHtmlSelector }
+        : {}),
       seo: parsed.seo ?? undefined,
     };
 

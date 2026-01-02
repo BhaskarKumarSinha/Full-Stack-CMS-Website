@@ -18,10 +18,10 @@ export default function Sidebar() {
           Pages
         </NavLink>
         <NavLink
-          to="/admin/pages/new"
+          to="/admin/page-code"
           className={({ isActive }) => (isActive ? "font-semibold" : "")}
         >
-          New Page
+          Page Code Editor
         </NavLink>
         <NavLink
           to="/admin/media"

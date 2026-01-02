@@ -16,6 +16,7 @@ export interface ISiteConfig extends Document {
       links?: { label?: string; href?: string }[];
     }[];
   };
+  fontFamily?: string; // Global font family (Roboto, Open Sans, Rubik, DM Sans)
   updatedAt: Date;
 }
 
@@ -42,6 +43,11 @@ const SiteConfigSchema = new Schema<ISiteConfig>({
     },
     // Allow storing footer style settings (colors, hover, underline) similar to nav
     footerStyle: { type: Schema.Types.Mixed, default: {} },
+  },
+  fontFamily: {
+    type: String,
+    default: "Roboto",
+    enum: ["Roboto", "Open Sans", "Rubik", "DM Sans"],
   },
   updatedAt: { type: Date, default: Date.now },
 });
